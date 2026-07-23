@@ -1,0 +1,35 @@
+---
+# git is Priority: optional on Debian, so it is genuinely absent on minimal
+# images — and community.general.git_config shells out to the `git` binary,
+# so it has to be here before the next task runs.
+- name: Install git
+  become: true
+  ansible.builtin.apt:
+    name: git
+    state: present
+    update_cache: true
+    cache_valid_time: 3600   # skip the mirror round-trip if apt refreshed recently
+
+# git_config invokes `git config` itself — the same mechanism as running the
+# three commands by hand, not a rewrite of the file. It reads with --get-all
+# first and reports changed=false when the value already matches, so unlike
+# update-locale (roles/locale) or kwriteconfig6 (roles/kitty) it needs no
+# read-then-write guard of ours. It also runs from / so a repo-local config
+# can never leak into that read.
+- name: Apply the global git settings
+  become: false          # this is *your* config, never root's
+  community.general.git_config:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    # Empty git_config_file -> `global` scope, letting git resolve the path.
+    # Set -> `file` scope against exactly that path. default(omit, true) is the
+    # falsy-aware form: it drops the parameter rather than passing "".
+    scope: "{{ 'file' if git_config_file else 'global' }}"
+    file: "{{ git_config_file | default(omit, true) }}"
+    state: present
+  loop:
+    - {name: user.name, value: "{{ git_user_name }}"}
+    - {name: user.email, value: "{{ git_user_email }}"}
+    - {name: init.defaultBranch, value: "{{ git_default_branch }}"}
+  loop_control:
+    label: "{{ item.name }}"

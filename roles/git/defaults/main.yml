@@ -1,0 +1,27 @@
+---
+# ---- Identity --------------------------------------------------------------
+# Written into the user's global git config. These are user-scoped, not
+# machine-scoped, so they live here rather than in host_vars — the same person
+# provisioning a VM or container wants the same identity there.
+# Override per-host (or per-user) in inventory/host_vars if that ever changes.
+git_user_name: "TheLamb"
+git_user_email: "syankuan@gmail.com"
+
+# ---- Repository defaults ---------------------------------------------------
+# git's own built-in initial branch is still `master`, and `git init` nags on
+# every run until this is set explicitly.
+git_default_branch: "main"
+
+# ---- Paths -----------------------------------------------------------------
+# Empty means "let git decide": the role writes with `--global`, i.e. git's own
+# resolution — ~/.gitconfig, or ~/.config/git/config when that file exists.
+# Because the tasks run with become: false, that is the *connecting* user's
+# home. When provisioning a box as root, name the real user's file instead —
+# same override contract as kitty_config_dir / zsh_home:
+#   git_config_file: /home/lamb/.gitconfig
+# Setting it switches the module from the `global` scope to the `file` scope
+# (`git config -f <path>`), which bypasses git's resolution entirely.
+git_config_file: ""
+
+# Full revert: `git config --global --unset <key>` for each key above (or drop
+# the corresponding lines from ~/.gitconfig by hand).
