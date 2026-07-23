@@ -1,38 +1,20 @@
 ---
 # ---- Applicability gate ----------------------------------------------------
-# Plymouth is absent on containers and minimal images, and initramfs-tools is
-# what actually carries the theme into the initramfs. Probe both, warn, and
-# skip — never fail. Same null-autodetect contract as grub_applicable.
-- name: Detect whether Plymouth can be configured on this host
-  when: plymouth_manage | bool and plymouth_applicable is none
-  block:
-    - name: Check for the Plymouth themes directory
-      ansible.builtin.stat:
-        path: /usr/share/plymouth/themes
-      register: _plymouth_themes_dir
+# plymouth_applicable is detected once in roles/facts (themes directory +
+# update-initramfs) — do NOT re-probe here (CLAUDE.md). Plymouth is absent on
+# containers and minimal images; there the role warns and skips, never fails.
+- name: Warn that Plymouth is not configurable here
+  ansible.builtin.debug:
+    msg: >-
+      Plymouth not usable on this host (themes directory or update-initramfs
+      missing) — plymouth role skipped, boot splash left as-is. Force with
+      plymouth_applicable: true in inventory/host_vars if this is wrong.
+  when: plymouth_manage | bool and not plymouth_applicable | bool
 
-    - name: Check for update-initramfs
-      ansible.builtin.stat:
-        path: /usr/sbin/update-initramfs
-      register: _plymouth_update_initramfs
-
-    - name: Decide plymouth-applicable from the detected signals
-      ansible.builtin.set_fact:
-        plymouth_applicable: >-
-          {{ _plymouth_themes_dir.stat.isdir | default(false)
-             and _plymouth_update_initramfs.stat.exists }}
-
-    - name: Warn that Plymouth is not configurable here
-      ansible.builtin.debug:
-        msg: >-
-          Plymouth not usable on this host (themes directory or update-initramfs
-          missing) — plymouth role skipped, boot splash left as-is. Force with
-          plymouth_applicable: true in inventory/host_vars if this is wrong.
-      when: not plymouth_applicable | bool
-
+# plymouth_manage is also gated at the play level (playbook.yaml); kept here
+# as defence in depth. NOTE the role still depends on roles/facts for
+# plymouth_applicable — included directly it would warn-and-skip (see CLAUDE.md).
 - name: Configure the Plymouth boot splash
-  # plymouth_manage first so Jinja short-circuits: plymouth_applicable may still
-  # be null when the role is disabled, and `none | bool` is deprecated.
   when: plymouth_manage | bool and plymouth_applicable | bool
   block:
     # plymouth-set-default-theme does not exist on this install; the real lever

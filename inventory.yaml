@@ -1,4 +1,11 @@
 development:
-  hosts:
-    cracker:
-      ansible_connection: local
+  children:
+    # Host classes (see CLAUDE.md): the group encodes policy, group_vars/<class>.yml
+    # carries it. Adding a headless box = one line under `headless`, nothing else.
+    workstations:
+      hosts:
+        cracker:
+          ansible_connection: local
+    headless:
+      hosts:
+        glowing-glass:

@@ -1,0 +1,96 @@
+---
+# Central host detection. THE one place that probes what a machine can do —
+# roles consume these vars and must never re-probe (see CLAUDE.md). Runs first
+# in the play under `tags: always`, so a sliced run (--tags kitty) still has
+# them defined.
+#
+# Every probe is guarded by "is the var already set?", so an explicit value in
+# inventory / group_vars / host_vars always wins over the autodetect. Only
+# stat and set_fact are used here: both execute normally under --check, so a
+# dry run branches on the same facts a real run would.
+
+# ---- Desktop environment ---------------------------------------------------
+# Consumed by roles/kitty (full emulator vs terminfo only).
+# The display-manager.service symlink is the honest signal: systemd's
+# default target is NOT — Ubuntu leaves graphical.target set on server installs
+# that have never had a display manager, which is exactly how a headless box
+# talked the kitty role into installing a GPU terminal emulator.
+- name: Check for an installed display manager
+  ansible.builtin.stat:
+    path: /etc/systemd/system/display-manager.service
+  register: _facts_dm
+  when: kitty_has_de is not defined
+
+- name: Decide has-DE from the detected signals  # noqa: var-naming[no-role-prefix]
+  ansible.builtin.set_fact:
+    kitty_has_de: "{{ _facts_dm.stat.exists }}"
+  when: kitty_has_de is not defined
+
+# ---- GRUB ------------------------------------------------------------------
+# Consumed by roles/grub. Absent on containers, cloud images booted by their
+# host, and systemd-boot machines. /boot/grub filters out images that merely
+# carry the grub binaries: there update-grub exists but has no boot directory
+# to regenerate.
+# `is not defined or is none` rather than plain `is none`: role defaults are
+# play-scoped only for statically-listed roles, and this role must not depend
+# on roles/grub having been parsed first.
+- name: Probe whether GRUB can be configured on this host
+  when: grub_applicable is not defined or grub_applicable is none
+  block:
+    - name: Check for update-grub
+      ansible.builtin.stat:
+        path: /usr/sbin/update-grub
+      register: _facts_update_grub
+
+    - name: Check for the GRUB boot directory
+      ansible.builtin.stat:
+        path: /boot/grub
+      register: _facts_grub_boot_dir
+
+    - name: Decide grub-applicable from the detected signals  # noqa: var-naming[no-role-prefix]
+      ansible.builtin.set_fact:
+        grub_applicable: >-
+          {{ _facts_update_grub.stat.exists
+             and _facts_grub_boot_dir.stat.isdir | default(false) }}
+
+# ---- Plymouth --------------------------------------------------------------
+# Consumed by roles/plymouth. Absent on containers and minimal images;
+# initramfs-tools is what actually carries the theme into the initramfs.
+- name: Probe whether Plymouth can be configured on this host
+  when: plymouth_applicable is not defined or plymouth_applicable is none
+  block:
+    - name: Check for the Plymouth themes directory
+      ansible.builtin.stat:
+        path: /usr/share/plymouth/themes
+      register: _facts_plymouth_themes
+
+    - name: Check for update-initramfs
+      ansible.builtin.stat:
+        path: /usr/sbin/update-initramfs
+      register: _facts_update_initramfs
+
+    - name: Decide plymouth-applicable from the detected signals  # noqa: var-naming[no-role-prefix]
+      ansible.builtin.set_fact:
+        plymouth_applicable: >-
+          {{ _facts_plymouth_themes.stat.isdir | default(false)
+             and _facts_update_initramfs.stat.exists }}
+
+# ---- KDE Plasma ------------------------------------------------------------
+# Consumed by roles/kitty and roles/fonts, which both used to stat this
+# themselves. apt-only package, so the path is stable; Plasma 6 is the target.
+- name: Check for KDE Plasma
+  ansible.builtin.stat:
+    path: /usr/bin/plasmashell
+  register: _facts_plasmashell
+  when: lamb_has_plasma is not defined
+
+- name: Decide has-Plasma from the detected signals  # noqa: var-naming[no-role-prefix]
+  ansible.builtin.set_fact:
+    lamb_has_plasma: "{{ _facts_plasmashell.stat.exists }}"
+  when: lamb_has_plasma is not defined
+
+- name: Report the detected host capabilities
+  ansible.builtin.debug:
+    msg: >-
+      facts: kitty_has_de={{ kitty_has_de }} lamb_has_plasma={{ lamb_has_plasma }}
+      grub_applicable={{ grub_applicable }} plymouth_applicable={{ plymouth_applicable }}

@@ -1,4 +1,7 @@
 ---
+# ---- Role gate -------------------------------------------------------------
+nvim_manage: true                # false = do not install or configure neovim
+
 # ---- Behaviour toggles ---------------------------------------------------
 nvim_set_default: true           # register nvim as the `editor` alternative
 

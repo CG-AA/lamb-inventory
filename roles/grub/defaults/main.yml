@@ -22,9 +22,22 @@ grub_applicable: ~
 grub_dropin_path: /etc/default/grub.d/95-boot-appearance.cfg
 
 # ---- Kernel cmdline --------------------------------------------------------
+# The drop-in NEVER plain-assigns GRUB_CMDLINE_LINUX_DEFAULT — it inherits what
+# /etc/default/grub and earlier drop-ins built up, removes the tokens below,
+# then appends its own. A plain assignment silently ate 90-lamb-machine.cfg's
+# `resume=` (hibernation) on glowing-glass; the composition guard in tasks/
+# main.yml now fails the run if that ever happens again.
+#
 # No 'splash' -> Plymouth never draws a graphical splash (stages 3-4 stay text).
-# kdump-tools.cfg appends crashkernel= afterwards, so don't list it here.
-grub_cmdline_default: "quiet"
+# kdump-tools.cfg appends crashkernel= after us, so don't list it here.
+grub_cmdline_add: "quiet"
+
+# Tokens stripped from whatever we inherit. 'quiet' is listed so re-adding it
+# below can never duplicate it (cracker's /etc/default/grub ships
+# GRUB_CMDLINE_LINUX_DEFAULT="quiet splash").
+grub_cmdline_remove:
+  - splash
+  - quiet
 
 # ---- Menu visibility -------------------------------------------------------
 grub_show_menu: false            # false = hidden; reveal with Shift/Esc during boot

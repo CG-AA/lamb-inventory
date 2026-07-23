@@ -1,4 +1,10 @@
 ---
+# ---- Role gate -------------------------------------------------------------
+# false = install nothing at all. Set for the whole headless class in
+# group_vars/headless.yml: a machine with no local display never rasterises
+# these glyphs — the terminal you SSH *from* does.
+fonts_manage: true
+
 # ---- Behaviour toggles -----------------------------------------------------
 fonts_set_fontconfig_default: true   # generic "monospace" -> Nerd Font, system-wide
 fonts_set_kde_fixed: true            # Plasma fixed-width font (kdeglobals [General] fixed)

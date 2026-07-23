@@ -106,19 +106,14 @@
 
 # ---- KDE Plasma fixed-width font -------------------------------------------
 # Plasma's Fonts KCM stores a concrete family, not the generic alias, so the
-# fontconfig drop-in alone does not move it. Detect Plasma by /usr/bin/plasmashell
-# (same probe as roles/kitty/tasks/desktop.yml); on GNOME/Xfce/headless hosts
-# this block skips and the fontconfig alias is all that applies.
-- name: Detect KDE Plasma
-  ansible.builtin.stat:
-    path: /usr/bin/plasmashell
-  register: _fonts_plasmashell
-
+# fontconfig drop-in alone does not move it. Plasma presence comes from
+# lamb_has_plasma (roles/facts) — do not re-probe. On GNOME/Xfce hosts this
+# block skips and the fontconfig alias is all that applies.
 - name: Set the Plasma fixed-width font
   become: false          # this is *your* dotfile, never root's
   when:
     - fonts_set_kde_fixed | bool
-    - _fonts_plasmashell.stat.exists
+    - lamb_has_plasma | bool
   block:
     - name: Locate the user's kdeglobals
       ansible.builtin.set_fact:

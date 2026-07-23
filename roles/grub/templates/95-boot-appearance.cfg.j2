@@ -1,7 +1,23 @@
 # Managed by Ansible — roles/grub (lamb-inventory). Do not edit by hand.
 # Sourced by grub-mkconfig after /etc/default/grub and 90-lamb-machine.cfg,
 # before kdump-tools.cfg (which appends crashkernel= to the cmdline below).
-GRUB_CMDLINE_LINUX_DEFAULT="{{ grub_cmdline_default }}"
+#
+# CONTRACT (CLAUDE.md): shared variables are INHERITED AND APPENDED TO, never
+# plain-assigned. 90-lamb-machine.cfg contributes resume=/resume_offset= on
+# hibernating hosts and sorts before us — an assignment here would delete it.
+# Below: take what earlier files built up, drop the tokens we own, append ours.
+_lamb_kept=""
+for _lamb_tok in $GRUB_CMDLINE_LINUX_DEFAULT; do
+  case " {{ grub_cmdline_remove | join(' ') }} " in
+    *" $_lamb_tok "*) ;;                                  # ours to control: drop
+    *) _lamb_kept="$_lamb_kept $_lamb_tok" ;;             # someone else's: keep
+  esac
+done
+_lamb_kept="${_lamb_kept# }"                              # strip the leading space
+# ${x:+y} keeps the separator only when there is something to separate, so an
+# empty inherited cmdline yields exactly "{{ grub_cmdline_add }}" with no stray spaces.
+GRUB_CMDLINE_LINUX_DEFAULT="${_lamb_kept:+$_lamb_kept }{{ grub_cmdline_add }}"
+unset _lamb_kept _lamb_tok
 GRUB_GFXMODE={{ grub_gfxmode }}
 {% if grub_show_menu | bool %}
 GRUB_TIMEOUT_STYLE=menu

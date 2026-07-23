@@ -1,4 +1,7 @@
 ---
+# ---- Role gate -------------------------------------------------------------
+locale_manage: true              # false = leave the system locale entirely alone
+
 # ---- Generated locales -----------------------------------------------------
 # Every locale listed here is generated (locale-gen) if missing; already-present
 # ones are left alone. The first is the system default set below.

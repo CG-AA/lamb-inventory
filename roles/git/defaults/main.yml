@@ -1,4 +1,7 @@
 ---
+# ---- Role gate -------------------------------------------------------------
+git_manage: true                 # false = leave git and its config alone
+
 # ---- Identity --------------------------------------------------------------
 # Written into the user's global git config. These are user-scoped, not
 # machine-scoped, so they live here rather than in host_vars — the same person

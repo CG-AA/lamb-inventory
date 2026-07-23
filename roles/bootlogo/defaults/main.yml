@@ -1,4 +1,8 @@
 ---
+# ---- Role gate -------------------------------------------------------------
+bootlogo_manage: true            # false = skip the role outright (see the
+                                 # hardware gate below for the per-machine one)
+
 # ---- Hardware gate ----------------------------------------------------------
 # Leave null to autodetect from DMI facts; force true/false in inventory to
 # override (same contract as kitty_has_de).

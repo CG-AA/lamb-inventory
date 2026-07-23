@@ -1,4 +1,7 @@
 ---
+# ---- Role gate -------------------------------------------------------------
+zsh_manage: true                 # false = no zsh, no plugins, no dotfiles
+
 # ---- Behaviour toggles ---------------------------------------------------
 # Point the connecting user's passwd entry at zsh. Takes effect on the next
 # login (running shells are unaffected). Set false to install and configure

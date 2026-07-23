@@ -1,41 +1,21 @@
 ---
 # ---- Applicability gate ----------------------------------------------------
-# GRUB is absent on containers, cloud images booted by their host, and
-# systemd-boot machines. Probe the real mechanism (update-grub) plus a real
-# boot directory, warn, and skip — never fail. Same null-autodetect contract as
-# kitty_has_de / bootlogo_enabled: force grub_applicable in inventory to skip
-# the probe entirely.
-- name: Detect whether GRUB can be configured on this host
-  when: grub_manage | bool and grub_applicable is none
-  block:
-    - name: Check for update-grub
-      ansible.builtin.stat:
-        path: /usr/sbin/update-grub
-      register: _grub_update_grub
+# grub_applicable is detected once in roles/facts (update-grub + /boot/grub) —
+# do NOT re-probe here (CLAUDE.md). GRUB is absent on containers, cloud images
+# booted by their host, and systemd-boot machines; there the role warns and
+# skips, never fails.
+- name: Warn that GRUB is not configurable here
+  ansible.builtin.debug:
+    msg: >-
+      GRUB not usable on this host (update-grub or /boot/grub missing) —
+      grub role skipped, boot appearance not applied. Force with
+      grub_applicable: true in inventory/host_vars if this is wrong.
+  when: grub_manage | bool and not grub_applicable | bool
 
-    # /boot/grub filters out images that merely carry the grub binaries: there
-    # update-grub exists but has no boot directory to regenerate.
-    - name: Check for the GRUB boot directory
-      ansible.builtin.stat:
-        path: /boot/grub
-      register: _grub_boot_dir
-
-    - name: Decide grub-applicable from the detected signals
-      ansible.builtin.set_fact:
-        grub_applicable: >-
-          {{ _grub_update_grub.stat.exists and _grub_boot_dir.stat.isdir | default(false) }}
-
-    - name: Warn that GRUB is not configurable here
-      ansible.builtin.debug:
-        msg: >-
-          GRUB not usable on this host (update-grub or /boot/grub missing) —
-          grub role skipped, boot appearance not applied. Force with
-          grub_applicable: true in inventory/host_vars if this is wrong.
-      when: not grub_applicable | bool
-
+# grub_manage is also gated at the play level (playbook.yaml); kept here as
+# defence in depth. NOTE the role still depends on roles/facts for
+# grub_applicable — included directly it would warn-and-skip (see CLAUDE.md).
 - name: Configure the GRUB boot appearance
-  # grub_manage first so Jinja short-circuits: grub_applicable may still be
-  # null when the role is disabled, and `none | bool` is deprecated.
   when: grub_manage | bool and grub_applicable | bool
   block:
     # No grub package ships /etc/default/grub.d — grub-mkconfig sources it only
@@ -98,3 +78,57 @@
         state: absent
       loop: "{{ grub_legacy_dropins }}"
       notify: Update GRUB
+
+    # ---- Composition guard --------------------------------------------------
+    # /etc/default/grub.d/ is a shared namespace: lamb-machine writes 90-, the
+    # kdump-tools package writes its own, we write 95-. grub-mkconfig sources
+    # them in glob order, so a plain assignment in a later file silently deletes
+    # what an earlier one contributed — which is exactly how this role ate
+    # 90-lamb-machine.cfg's resume= (hibernation) on glowing-glass.
+    #
+    # Source the same files grub-mkconfig does, twice: once WITHOUT our drop-in
+    # (the baseline other tools asked for) and once WITH it (what will be
+    # generated). Every baseline token we did not deliberately claim in
+    # grub_cmdline_remove must survive. Fails the run loudly if it doesn't —
+    # this catches the next tool to land in that directory too, not just ours.
+    - name: Verify the drop-in preserves what other grub.d files contributed
+      become: true
+      changed_when: false
+      when: not ansible_check_mode      # the template above is not on disk under --check
+      ansible.builtin.shell:
+        executable: /bin/sh
+        cmd: |
+          dir='{{ grub_dropin_path | dirname }}'
+          ours='{{ grub_dropin_path }}'
+          owned=' {{ grub_cmdline_remove | join(" ") }} '
+
+          # Mirror grub-mkconfig: /etc/default/grub first, then grub.d/*.cfg in
+          # glob order, in a subshell so the sourcing cannot leak out.
+          #   $1 = "skip" to leave our own drop-in out, anything else to include it
+          #   $2 = name of the variable to report back
+          collect() {
+            (
+              if [ -r /etc/default/grub ]; then . /etc/default/grub; fi
+              for f in "$dir"/*.cfg; do
+                if [ ! -r "$f" ]; then continue; fi
+                if [ "$1" = skip ] && [ "$f" = "$ours" ]; then continue; fi
+                . "$f"
+              done
+              eval "printf '%s\n' \"\$$2\""
+            )
+          }
+
+          rc=0
+          for var in GRUB_CMDLINE_LINUX_DEFAULT GRUB_CMDLINE_LINUX; do
+            base=$(collect skip "$var")
+            final=$(collect all "$var")
+            for tok in $base; do
+              case "$owned" in *" $tok "*) continue ;; esac      # ours to control
+              case " $final " in
+                *" $tok "*) ;;
+                *) echo "CLOBBER: $ours drops '$tok' from $var"; rc=1 ;;
+              esac
+            done
+          done
+          if [ "$rc" = 0 ]; then echo "OK: no inherited tokens lost"; fi
+          exit "$rc"

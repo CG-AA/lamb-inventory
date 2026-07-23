@@ -1,0 +1,19 @@
+---
+# Class policy for `headless` hosts (SSH-only, no seat at the machine).
+# Anything here is true of the whole class — one-machine truths belong in
+# host_vars/, and everything not listed keeps the role defaults: zsh, git,
+# nvim, locale and the text plymouth theme are all wanted on a headless box.
+
+# Never the full GPU emulator: glyphs render in the *client's* terminal, the
+# server only needs the terminfo entry so TERM=xterm-kitty resolves over SSH.
+# This also overrides the roles/facts autodetect (defined beats probe).
+kitty_has_de: false
+
+# Same reason: fonts on the server are dead weight when no local display ever
+# rasterises them. Skips the Nerd Font download AND the fontconfig drop-in.
+fonts_manage: false
+
+# Boot appearance stays managed (the drop-in self-heals drift), but a box you
+# can only reach remotely keeps the visible 5s menu — hiding it would cost the
+# one chance to pick a fallback kernel from a crash cart / KVM.
+grub_show_menu: true

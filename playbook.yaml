@@ -2,34 +2,53 @@
 - name: Development base
   hosts: development
   gather_facts: true      # needed for ansible_user_dir (home of the target user)
-  # Every role carries its own tag; the boot trio shares `boot`. Re-run a slice
-  # with e.g. `ansible-playbook playbook.yaml --tags boot` (or --tags kitty).
+  # Contracts (full text in CLAUDE.md — read it before adding a role):
+  #   * every role carries `<role>_manage` (default true) and is gated on it
+  #     HERE, so any role can be switched off from group_vars/host_vars without
+  #     touching its tasks;
+  #   * host detection happens ONLY in roles/facts, which must stay first and
+  #     tagged `always` so a sliced run (--tags kitty) still has its vars.
+  # Every role also carries its own tag; the boot trio shares `boot`. Re-run a
+  # slice with e.g. `ansible-playbook playbook.yaml --tags boot` (or --tags kitty).
   roles:
+    # Probes this machine once: kitty_has_de, lamb_has_plasma, grub_applicable,
+    # plymouth_applicable. Detection only — this role never changes anything.
+    - role: facts
+      tags: [always]
     # UTF-8 base: generated locales + LANG, drops the blanket LC_ALL
     - role: locale
+      when: locale_manage | bool
       tags: [locale]
     # JetBrainsMono Nerd Font + monospace wiring (fontconfig/Plasma)
     - role: fonts
+      when: fonts_manage | bool
       tags: [fonts]
     - role: kitty
+      when: kitty_manage | bool
       tags: [kitty]
     - role: nvim
+      when: nvim_manage | bool
       tags: [nvim]
     # identity + init.defaultBranch in the user's global git config
     - role: git
+      when: git_manage | bool
       tags: [git]
     # boot appearance: cmdline (no splash), hidden menu, background
     - role: grub
+      when: grub_manage | bool
       tags: [grub, boot]
     # splash off via text theme (package kept for the LUKS prompt)
     - role: plymouth
+      when: plymouth_manage | bool
       tags: [plymouth, boot]
     # Lenovo LBLDESP scaffold — DMI-gated, firmware write deferred
     - role: bootlogo
+      when: bootlogo_manage | bool
       tags: [bootlogo, boot]
     # zsh + plugins + starship prompt and the shared shell dotfiles; the 26 MB
     # bad-apple frame set only lands where zsh_badapple is true (host_vars)
     - role: zsh
+      when: zsh_manage | bool
       tags: [zsh]
     # add more roles here as you modularise the rest of your setup, e.g.:
     # - dialout   # the `usermod -aG dialout` note in tmp.txt

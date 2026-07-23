@@ -22,19 +22,14 @@
 # a separate key, TerminalApplication in kdeglobals [General]. NOTE this does
 # NOT cover pinned taskbar launchers or app-specific hotkeys -- those invoke a
 # fixed .desktop (e.g. org.kde.konsole) and bypass this key entirely.
-# On Debian we detect Plasma by the presence of /usr/bin/plasmashell (apt-only
-# role, so the path is stable). Plasma 6 uses the bare executable name here;
-# Plasma 5's .desktop-based TerminalService is not handled (targets Plasma 6).
-- name: Detect KDE Plasma
-  ansible.builtin.stat:
-    path: /usr/bin/plasmashell
-  register: _kitty_plasmashell
-
+# Plasma presence comes from lamb_has_plasma (roles/facts) — do not re-probe.
+# Plasma 6 uses the bare executable name here; Plasma 5's .desktop-based
+# TerminalService is not handled (targets Plasma 6).
 - name: Configure kitty as the Plasma default terminal
   become: false          # per-user dotfile like kitty.conf, never root's
   when:
     - kitty_set_default | bool
-    - _kitty_plasmashell.stat.exists
+    - lamb_has_plasma | bool
   block:
     # kdeglobals sits beside kitty_config_dir so a kitty_config_dir override
     # (provision as root, target another login user) is honoured here too.
@@ -74,7 +69,7 @@
   become: false
   when:
     - kitty_replace_konsole | bool
-    - _kitty_plasmashell.stat.exists
+    - lamb_has_plasma | bool
   vars:
     _kitty_cfg: "{{ kitty_config_dir | dirname }}"
   block:

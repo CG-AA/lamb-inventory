@@ -1,7 +1,11 @@
 ---
+# ---- Role gate -------------------------------------------------------------
+kitty_manage: true               # false = no kitty at all, not even terminfo
+
 # ---- Behaviour toggles ---------------------------------------------------
-# kitty_has_de is auto-detected (systemd graphical.target / display manager).
-# Leave it unset for autodetect, or force it per-host in inventory/host_vars:
+# kitty_has_de is detected once in roles/facts (display-manager.service).
+# Leave it unset for autodetect, or force it per-host/per-class — group_vars/
+# headless.yml pins it false for the whole SSH-only class:
 #   kitty_has_de: true    # treat as desktop -> full kitty
 #   kitty_has_de: false   # treat as headless -> terminfo only
 
