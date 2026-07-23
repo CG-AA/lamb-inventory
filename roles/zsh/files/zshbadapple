@@ -1,0 +1,20 @@
+# ---- bad apple as identity segment ----
+# Rendered by the [custom.badapple] segment in ~/.config/starship.toml.
+# The frame set is deployed only where zsh_badapple is true, so the presence of
+# esc/ *is* the per-host opt-in signal — no hostname check needed, and the `cat`
+# below can never fire on a host that has no frames.
+BA_DIR=~/.badapple
+badapple_precmd() {
+  if [[ -z $KITTY_WINDOW_ID || -n $SSH_TTY || ! -d $BA_DIR/esc ]]; then
+    unset BADAPPLE_SEG; return
+  fi
+  local n=0
+  [[ -f $BA_DIR/.n ]] && n=$(<$BA_DIR/.n)
+  local id=$(printf "%04d" $n)
+  [[ -f $BA_DIR/esc/$id.apc ]] || { n=0; id=0000; }   # loop at the end
+  cat "$BA_DIR/esc/$id.apc"                            # transmit, draws nothing
+  export BADAPPLE_SEG="$(<$BA_DIR/esc/$id.ph)"
+  print $((n+1)) > $BA_DIR/.n
+}
+autoload -Uz add-zsh-hook
+add-zsh-hook precmd badapple_precmd

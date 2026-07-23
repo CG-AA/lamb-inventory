@@ -1,0 +1,55 @@
+---
+# The `locales` package carries both locale-gen and update-locale. It is
+# Priority: standard, so it ships on desktop and server installs but not on
+# minimal/container images — ensure it rather than assume it.
+- name: Install the locales package
+  become: true
+  ansible.builtin.apt:
+    name: locales
+    state: present
+    update_cache: true
+    cache_valid_time: 3600   # skip the mirror round-trip if apt refreshed recently
+
+- name: Ensure the required locales are generated
+  become: true
+  community.general.locale_gen:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ locale_generate }}"
+
+# update-locale is not idempotent-reporting: it rewrites /etc/default/locale on
+# every call. Gate it behind a read of the current file — same read-then-write
+# contract as the kreadconfig6 guard in roles/kitty/tasks/desktop.yml.
+- name: Check for the system locale defaults file
+  ansible.builtin.stat:
+    path: /etc/default/locale
+  register: _locale_stat
+
+- name: Read the current system locale defaults
+  ansible.builtin.slurp:
+    src: /etc/default/locale
+  register: _locale_file
+  when: _locale_stat.stat.exists
+
+- name: Decide whether update-locale needs to run
+  vars:
+    # Missing file (minimal images) -> empty string -> both checks below fire.
+    _locale_current: "{{ (_locale_file.content | default('') | b64decode) }}"
+  ansible.builtin.set_fact:
+    _locale_needs_update: >-
+      {{ _locale_current is not search('(?m)^LANG="?' ~ (locale_lang | regex_escape) ~ '"?$')
+         or (locale_remove_lc_all | bool and _locale_current is search('(?m)^LC_ALL=')) }}
+
+# A BARE variable name (no "=") tells update-locale to remove that variable —
+# see update-locale(8). Passing "LC_ALL=" instead writes an empty assignment
+# and leaves the line in place, which would keep this task reporting changed.
+- name: Set LANG (and drop LC_ALL) via update-locale  # noqa: command-instead-of-module (no module drives update-locale; templating the file would fight it)
+  become: true
+  ansible.builtin.command:
+    argv: >-
+      {{ ['update-locale', 'LANG=' ~ locale_lang]
+         + (['LC_ALL'] if locale_remove_lc_all | bool else []) }}
+  changed_when: true      # only reached when the file actually differs
+  when: _locale_needs_update | bool
+  # Applies at the next login. The current session keeps its inherited LANG /
+  # LC_ALL — `locale` will still show the old values until you log back in.

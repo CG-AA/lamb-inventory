@@ -1,0 +1,63 @@
+---
+# ---- Behaviour toggles -----------------------------------------------------
+fonts_set_fontconfig_default: true   # generic "monospace" -> Nerd Font, system-wide
+fonts_set_kde_fixed: true            # Plasma fixed-width font (kdeglobals [General] fixed)
+fonts_cleanup_old_versions: true     # remove superseded jetbrains-mono-nerd-* dirs
+
+# ---- Nerd Font release pin -------------------------------------------------
+# The patched JetBrainsMono from ryanoasis/nerd-fonts, NOT apt's
+# fonts-jetbrains-mono — the apt build is the genuine upstream font and has
+# none of the icon glyphs (powerline, devicons) that prompts and TUIs draw.
+# To upgrade: bump the version AND the checksum together; the checksum comes
+# from the SHA-256.txt asset on the same release page. The old versioned
+# directory is then swept by the cleanup task.
+fonts_nerd_version: "v3.4.0"
+fonts_nerd_archive: "JetBrainsMono.tar.xz"
+fonts_nerd_url: "https://github.com/ryanoasis/nerd-fonts/releases/download/{{ fonts_nerd_version }}/{{ fonts_nerd_archive }}"
+fonts_nerd_checksum: "sha256:ef552a3e638f25125c6ad4c51176a6adcdce295ab1d2ffacf0db060caf8c1582"
+
+# The archive is FLAT (no top-level directory) and ships 96 ttfs, ~250 MB
+# unpacked: 16 weights x {base, Mono, Propo} x {ligatures, NL no-ligature}.
+# Only the base family is installed — it is what fontconfig, Plasma and kitty
+# reference below, and all 16 weights keep kitty's `bold_font auto` resolving.
+# These are GNU tar --wildcards member patterns; add families by extending:
+#   fonts_nerd_extract: ["JetBrainsMonoNerdFont*.ttf", "OFL.txt"]   # + Mono/Propo/NL
+fonts_nerd_extract:
+  - "JetBrainsMonoNerdFont-*.ttf"
+  - "OFL.txt"                        # the licence rides along with the fonts
+
+# ---- Install layout --------------------------------------------------------
+# Versioned directory, so an upgrade is a clean swap rather than a merge of two
+# releases' files. The .ansible-stamp written after a successful extract is the
+# idempotency marker: while it exists, re-runs skip download and extraction
+# entirely (no network traffic).
+fonts_install_root: /usr/local/share/fonts
+fonts_install_dir: "{{ fonts_install_root }}/jetbrains-mono-nerd-{{ fonts_nerd_version }}"
+fonts_download_dest: "/tmp/{{ fonts_nerd_archive }}"
+
+# ---- Family wiring ---------------------------------------------------------
+# The family name the patched fonts actually register as — check with
+# `fc-list | grep -i jetbrains` after the first run if you ever change release.
+fonts_family: "JetBrainsMono Nerd Font"
+
+# fontconfig drop-in. The number is load-bearing; conf.d is read in glob order
+# and the first <prefer> inserted lands first in the family list:
+#   51-local.conf                     (your hand-made /etc/fonts/local.conf — still wins)
+#   52-jetbrains-mono-nerd.conf       (ours)
+#   56-language-selector-prefer.conf  (language packs; gains monospace prefers on CJK hosts)
+#   57-dejavu-sans-mono.conf          (the distro default we are displacing)
+fonts_fontconfig_dropin: /etc/fonts/conf.d/52-jetbrains-mono-nerd.conf
+
+# Plasma's fixed-width font. The long string is Qt 6's QFont::toString() form,
+# exactly what the Fonts KCM writes; size is the second field.
+fonts_kde_size: 10
+fonts_kde_font_string: "{{ fonts_family }},{{ fonts_kde_size }},-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
+
+# Where kdeglobals lives. Same override contract as kitty_config_dir — when
+# provisioning as root for another login user:
+#   fonts_kde_config_dir: /home/lamb/.config
+fonts_kde_config_dir: "{{ ansible_facts['user_dir'] }}/.config"
+
+# Full revert: delete {{ fonts_install_dir }} and {{ fonts_fontconfig_dropin }},
+# run `sudo fc-cache -f`, and
+# `kwriteconfig6 --file kdeglobals --group General --key fixed --delete`.

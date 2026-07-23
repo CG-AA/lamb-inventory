@@ -1,0 +1,144 @@
+---
+# Desktop path: full emulator + default terminal + your config.
+- name: Install kitty
+  become: true
+  ansible.builtin.apt:
+    name: kitty
+    state: present
+    update_cache: true
+    cache_valid_time: 3600   # skip the mirror round-trip if apt refreshed recently
+
+- name: Make kitty the default terminal (x-terminal-emulator)
+  become: true
+  community.general.alternatives:
+    name: x-terminal-emulator
+    link: /usr/bin/x-terminal-emulator
+    path: /usr/bin/kitty
+    priority: 60          # > konsole (40); `path` also forces manual selection
+  when: kitty_set_default | bool
+
+# KDE Plasma ignores x-terminal-emulator: its KTerminalLauncherJob callers
+# ("Open Terminal Here" in Dolphin, etc.) and the Default Applications KCM read
+# a separate key, TerminalApplication in kdeglobals [General]. NOTE this does
+# NOT cover pinned taskbar launchers or app-specific hotkeys -- those invoke a
+# fixed .desktop (e.g. org.kde.konsole) and bypass this key entirely.
+# On Debian we detect Plasma by the presence of /usr/bin/plasmashell (apt-only
+# role, so the path is stable). Plasma 6 uses the bare executable name here;
+# Plasma 5's .desktop-based TerminalService is not handled (targets Plasma 6).
+- name: Detect KDE Plasma
+  ansible.builtin.stat:
+    path: /usr/bin/plasmashell
+  register: _kitty_plasmashell
+
+- name: Configure kitty as the Plasma default terminal
+  become: false          # per-user dotfile like kitty.conf, never root's
+  when:
+    - kitty_set_default | bool
+    - _kitty_plasmashell.stat.exists
+  block:
+    # kdeglobals sits beside kitty_config_dir so a kitty_config_dir override
+    # (provision as root, target another login user) is honoured here too.
+    - name: Locate the user's kdeglobals
+      ansible.builtin.set_fact:
+        _kitty_kdeglobals: "{{ kitty_config_dir | dirname }}/kdeglobals"
+
+    # Write with KDE's own CLI -- the exact same edit System Settings ->
+    # Default Applications -> Terminal Emulator makes. kwriteconfig6 is not
+    # idempotent (it always rewrites), so gate it behind a read of the current
+    # value; that keeps the task green on re-runs. argv form avoids any shell
+    # quoting of the --file path.  # noqa: command-instead-of-module
+    - name: Read the current Plasma default terminal
+      ansible.builtin.command:
+        argv: [kreadconfig6, --file, "{{ _kitty_kdeglobals }}",
+               --group, General, --key, TerminalApplication]
+      register: _kitty_plasma_term
+      changed_when: false
+      failed_when: false      # missing key -> empty stdout, treated as "needs set"
+      check_mode: false       # read-only, safe under --check
+
+    - name: Make kitty the default terminal in Plasma (kwriteconfig6)  # noqa: command-instead-of-module
+      ansible.builtin.command:
+        argv: [kwriteconfig6, --file, "{{ _kitty_kdeglobals }}",
+               --group, General, --key, TerminalApplication, kitty]
+      changed_when: true      # only reached when the value actually differs
+      when: _kitty_plasma_term.stdout | trim != 'kitty'
+      # A running Plasma session picks this up on the next launch; a full
+      # re-login guarantees it. No kbuildsycoca rebuild is needed for this key.
+
+# The default-terminal keys above cover apps that *ask* the system for a
+# terminal. They do NOT touch Konsole's own taskbar pin or its built-in
+# Ctrl+Alt+T -- those launch org.kde.konsole.desktop directly. This block
+# displaces those two paths. Unlike kdeglobals, panel + shortcut changes are
+# read by plasmashell/kglobalaccel only at login, so these apply next login.
+- name: Displace Konsole in favour of kitty (Plasma)
+  become: false
+  when:
+    - kitty_replace_konsole | bool
+    - _kitty_plasmashell.stat.exists
+  vars:
+    _kitty_cfg: "{{ kitty_config_dir | dirname }}"
+  block:
+    # The containment/applet group ids in appletsrc are host-specific, so we
+    # can't target a fixed ini key -- strip the launcher from the value list by
+    # regex instead. Two alternatives so the comma goes with the entry wherever
+    # it sits: the first matches a preceding comma (middle/last position), the
+    # second a trailing one (first position) or none at all (only entry).
+    # No-op when absent.
+    - name: Check for a Plasma panel config
+      ansible.builtin.stat:
+        path: "{{ _kitty_cfg }}/plasma-org.kde.plasma.desktop-appletsrc"
+      register: _kitty_appletsrc
+
+    - name: Drop the Konsole pin from the Plasma taskbar
+      ansible.builtin.replace:
+        path: "{{ _kitty_cfg }}/plasma-org.kde.plasma.desktop-appletsrc"
+        regexp: ',applications:org\.kde\.konsole\.desktop|applications:org\.kde\.konsole\.desktop,?'
+        replace: ''
+      when: _kitty_appletsrc.stat.exists
+
+    # Global shortcuts live under fixed .desktop-named groups in
+    # kglobalshortcutsrc, so ini_file is idempotent here (no kwriteconfig6
+    # read-guard needed). Value is active,default,label -- active "none"
+    # disables Konsole's default; the GUI shows it as changed-from-default.
+    - name: Disable Konsole's built-in Ctrl+Alt+T launch shortcut
+      community.general.ini_file:
+        path: "{{ _kitty_cfg }}/kglobalshortcutsrc"
+        section: org.kde.konsole.desktop
+        option: "{{ item.k }}"
+        value: "{{ item.v }}"
+        no_extra_spaces: true      # KDE wants Key=Value
+        mode: "0644"
+      loop:
+        - { k: _k_friendly_name, v: Konsole }
+        - { k: _launch, v: "none,Ctrl+Alt+T,Launch Konsole" }
+      loop_control:
+        label: "{{ item.k }}"
+
+    - name: Bind kitty's launch to {{ kitty_launch_shortcut }}
+      community.general.ini_file:
+        path: "{{ _kitty_cfg }}/kglobalshortcutsrc"
+        section: kitty.desktop
+        option: "{{ item.k }}"
+        value: "{{ item.v }}"
+        no_extra_spaces: true
+        mode: "0644"
+      loop:
+        - { k: _k_friendly_name, v: kitty }
+        - { k: _launch, v: "{{ kitty_launch_shortcut }},none,Launch kitty" }
+      loop_control:
+        label: "{{ item.k }}"
+
+- name: Ensure kitty config directory exists
+  become: false          # this is *your* dotfile, never root's
+  ansible.builtin.file:
+    path: "{{ kitty_config_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Deploy kitty.conf from the role (source of truth)
+  become: false
+  ansible.builtin.copy:
+    src: kitty.conf     # static file; kitty.conf's {{{ }}} fold markers are not Jinja
+    dest: "{{ kitty_config_dir }}/kitty.conf"
+    mode: "0644"
+    backup: true         # keeps the previous file on first run, so nothing is lost

@@ -1,0 +1,6 @@
+---
+- name: Update GRUB  # noqa: command-instead-of-module (no module regenerates grub.cfg)
+  become: true
+  ansible.builtin.command:
+    argv: [update-grub]
+  changed_when: true

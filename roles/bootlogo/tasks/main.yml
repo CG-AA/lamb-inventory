@@ -1,0 +1,56 @@
+---
+# Firmware logos are per-machine; gate on DMI identity unless the inventory
+# forces bootlogo_enabled (same autodetect contract as kitty_has_de).
+- name: Decide whether this machine gets the firmware boot logo
+  when: bootlogo_enabled is none
+  block:
+    - name: Match this machine's DMI identity
+      ansible.builtin.set_fact:
+        bootlogo_enabled: >-
+          {{ ansible_facts['system_vendor'] | default('') == bootlogo_vendor_match
+             and ansible_facts['board_name'] | default('') == bootlogo_board_match }}
+
+    # Say so rather than skipping in silence — the recap otherwise gives no hint
+    # why the role did nothing (same courtesy as the grub/plymouth gates).
+    - name: Note that this machine is not the logo's target
+      ansible.builtin.debug:
+        msg: >-
+          bootlogo skipped: DMI is
+          {{ ansible_facts['system_vendor'] | default('?') }}/{{ ansible_facts['board_name'] | default('?') }},
+          role targets {{ bootlogo_vendor_match }}/{{ bootlogo_board_match }}
+          (ThinkBook 14 G6 IRL). Force with bootlogo_enabled: true if intended.
+      when: not bootlogo_enabled | bool
+
+- name: Ensure the logo directory exists on the ESP
+  become: true
+  ansible.builtin.file:
+    path: "{{ bootlogo_esp_dir }}"
+    state: directory
+    mode: "0755"
+  when: bootlogo_enabled | bool
+
+- name: Check whether the role ships a logo image
+  delegate_to: localhost
+  become: false
+  ansible.builtin.stat:
+    path: "{{ role_path }}/files/{{ bootlogo_image_src }}"
+  register: _bootlogo_src
+  when: bootlogo_enabled | bool
+
+- name: Stage the logo on the ESP (survives ESP rebuilds via re-run)
+  become: true
+  ansible.builtin.copy:
+    src: "{{ bootlogo_image_src }}"
+    dest: "{{ bootlogo_esp_dir }}/{{ bootlogo_image_src }}"
+    mode: "0644"
+  when: bootlogo_enabled | bool and _bootlogo_src.stat.exists
+
+- name: Document the deferred firmware activation step
+  ansible.builtin.debug:
+    msg: >-
+      Logo {{ 'staged at ' + bootlogo_esp_dir if _bootlogo_src.stat.exists
+              else 'NOT staged — drop ' + bootlogo_image_src + ' into roles/bootlogo/files/' }}.
+      Activation is manual by design: the LBLDESP enable byte is still 0x00.
+      Flip it with the vetted lenovo-logo-changer tool (see defaults/main.yml);
+      formats JPG/GIF/BMP, <=1920x1200, ~768px wide recommended.
+  when: bootlogo_enabled | bool

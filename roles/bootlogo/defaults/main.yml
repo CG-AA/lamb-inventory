@@ -1,0 +1,23 @@
+---
+# ---- Hardware gate ----------------------------------------------------------
+# Leave null to autodetect from DMI facts; force true/false in inventory to
+# override (same contract as kitty_has_de).
+bootlogo_enabled: ~
+bootlogo_vendor_match: "LENOVO"
+bootlogo_board_match: "LNVNB161216"   # ThinkBook 14 G6 IRL (machine type 21KG)
+
+# ---- Logo asset ---------------------------------------------------------------
+# Drop the image into roles/bootlogo/files/. Firmware constraints read from this
+# machine's LBLDESP variable: formats JPG/GIF/BMP only (bitmask 0x19 — no PNG!),
+# max 1920x1200, recommended <=768px wide (~40% of panel; the factory logo is
+# 768x256). Prefer JPG for photos, BMP for lossless; avoid GIF (256 colours).
+bootlogo_image_src: "lenovo-logo.bmp"
+bootlogo_esp_dir: /boot/efi/EFI/Lenovo/Logo
+
+# ---- Why this role exists (scaffold; firmware write DEFERRED) -----------------
+# The LBLDESP UEFI variable (871455d0-5576-4fb8-9865-af0824463b9e) enables the
+# custom logo; its enable byte is currently 0x00 (off). This role only stages
+# the asset on the ESP — surviving the "ESP got rebuilt" failure mode — and
+# documents the manual enable step. Flipping LBLDESP is deliberately NOT
+# automated yet; when ready, use the vetted lenovo-logo-changer tool:
+#   https://github.com/chnzzh/lenovo-logo-changer

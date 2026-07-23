@@ -1,0 +1,28 @@
+---
+# ---- Generated locales -----------------------------------------------------
+# Every locale listed here is generated (locale-gen) if missing; already-present
+# ones are left alone. The first is the system default set below.
+# Override examples (inventory/host_vars):
+#   locale_generate: [en_US.UTF-8, zh_TW.UTF-8, ja_JP.UTF-8]
+locale_generate:
+  - en_US.UTF-8
+  - zh_TW.UTF-8
+
+# ---- System default --------------------------------------------------------
+# Written to /etc/default/locale with update-locale — Debian's own tool, the
+# same one that generated that file at install time. Never template the file
+# directly; update-locale rewrites it wholesale and would fight us.
+# Takes effect at the next login (pam_env reads it); running shells keep their
+# inherited environment until then.
+locale_lang: "en_US.UTF-8"
+
+# The Ubuntu installer leaves a blanket LC_ALL=<lang> alongside LANG. LC_ALL
+# overrides every LC_* category unconditionally — it is meant as a temporary
+# debugging override, not a system default, and it defeats any per-category
+# tailoring (e.g. LC_TIME). This role removes it: update-locale deletes any
+# variable passed as a bare name, i.e. `update-locale LC_ALL`.
+#   locale_remove_lc_all: false   # keep an existing LC_ALL untouched
+locale_remove_lc_all: true
+
+# Full revert: `sudo update-locale LANG=<old> LC_ALL=<old>` (generated locales
+# are harmless to leave in place).

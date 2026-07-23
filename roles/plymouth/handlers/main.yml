@@ -1,0 +1,6 @@
+---
+- name: Update initramfs  # noqa: command-instead-of-module (no module for update-initramfs)
+  become: true
+  ansible.builtin.command:
+    argv: [update-initramfs, -u]
+  changed_when: true

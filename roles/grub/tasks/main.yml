@@ -1,0 +1,100 @@
+---
+# ---- Applicability gate ----------------------------------------------------
+# GRUB is absent on containers, cloud images booted by their host, and
+# systemd-boot machines. Probe the real mechanism (update-grub) plus a real
+# boot directory, warn, and skip — never fail. Same null-autodetect contract as
+# kitty_has_de / bootlogo_enabled: force grub_applicable in inventory to skip
+# the probe entirely.
+- name: Detect whether GRUB can be configured on this host
+  when: grub_manage | bool and grub_applicable is none
+  block:
+    - name: Check for update-grub
+      ansible.builtin.stat:
+        path: /usr/sbin/update-grub
+      register: _grub_update_grub
+
+    # /boot/grub filters out images that merely carry the grub binaries: there
+    # update-grub exists but has no boot directory to regenerate.
+    - name: Check for the GRUB boot directory
+      ansible.builtin.stat:
+        path: /boot/grub
+      register: _grub_boot_dir
+
+    - name: Decide grub-applicable from the detected signals
+      ansible.builtin.set_fact:
+        grub_applicable: >-
+          {{ _grub_update_grub.stat.exists and _grub_boot_dir.stat.isdir | default(false) }}
+
+    - name: Warn that GRUB is not configurable here
+      ansible.builtin.debug:
+        msg: >-
+          GRUB not usable on this host (update-grub or /boot/grub missing) —
+          grub role skipped, boot appearance not applied. Force with
+          grub_applicable: true in inventory/host_vars if this is wrong.
+      when: not grub_applicable | bool
+
+- name: Configure the GRUB boot appearance
+  # grub_manage first so Jinja short-circuits: grub_applicable may still be
+  # null when the role is disabled, and `none | bool` is deprecated.
+  when: grub_manage | bool and grub_applicable | bool
+  block:
+    # No grub package ships /etc/default/grub.d — grub-mkconfig sources it only
+    # if it exists (on hosts with kdump-tools a package created it already).
+    # Ours is the drop-in that needs it, so ours creates it.
+    - name: Ensure the GRUB drop-in directory exists
+      become: true
+      ansible.builtin.file:
+        path: "{{ grub_dropin_path | dirname }}"
+        state: directory
+        mode: "0755"
+
+    # The role ships without a real background image; probe whether the user has
+    # dropped one into roles/grub/files/ and degrade gracefully when they haven't
+    # (the drop-in then simply omits GRUB_BACKGROUND).
+    - name: Check whether the role ships a background image
+      delegate_to: localhost
+      become: false
+      ansible.builtin.stat:
+        path: "{{ role_path }}/files/{{ grub_background_src }}"
+      register: _grub_bg_src
+      when: grub_background_enabled | bool
+
+    - name: Decide whether the background can be configured
+      ansible.builtin.set_fact:
+        _grub_background_ready: >-
+          {{ grub_background_enabled | bool
+             and (_grub_bg_src.stat.exists | default(false)) }}
+
+    - name: Note the missing background image (drop one into roles/grub/files/)
+      ansible.builtin.debug:
+        msg: >-
+          No {{ grub_background_src }} in roles/grub/files/ — the drop-in will omit
+          GRUB_BACKGROUND until you add one (PNG/JPEG/TGA, sized to grub_gfxmode).
+      when: grub_background_enabled | bool and not _grub_background_ready
+
+    - name: Deploy the GRUB menu background image
+      become: true
+      ansible.builtin.copy:
+        src: "{{ grub_background_src }}"
+        dest: "{{ grub_background_dest }}"
+        mode: "0644"
+      when: _grub_background_ready
+      notify: Update GRUB
+
+    - name: Deploy the boot-appearance GRUB drop-in
+      become: true
+      ansible.builtin.template:
+        src: 95-boot-appearance.cfg.j2
+        dest: "{{ grub_dropin_path }}"
+        mode: "0644"
+      notify: Update GRUB
+
+    # These were manual one-offs from the GPT/ESP migration; their settings now
+    # live in the drop-in above (and would otherwise override it, sorting later).
+    - name: Retire absorbed legacy drop-ins
+      become: true
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: "{{ grub_legacy_dropins }}"
+      notify: Update GRUB

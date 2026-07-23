@@ -1,0 +1,9 @@
+---
+# Headless path: just the terminfo entry so `TERM=xterm-kitty` resolves over SSH.
+- name: Install kitty terminfo entry only (no DE detected)
+  become: true
+  ansible.builtin.apt:
+    name: kitty-terminfo
+    state: present
+    update_cache: true
+    cache_valid_time: 3600   # skip the mirror round-trip if apt refreshed recently

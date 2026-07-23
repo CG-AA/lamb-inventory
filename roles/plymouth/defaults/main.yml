@@ -1,0 +1,21 @@
+---
+# ---- Behaviour toggles ------------------------------------------------------
+plymouth_manage: true            # false = leave Plymouth entirely alone
+
+# Whether Plymouth can actually be configured here. Leave null to autodetect
+# (themes directory + update-initramfs present), or force it per-host:
+#   plymouth_applicable: false   # never touch the splash on this machine
+# Containers and minimal images autodetect to false: the role then warns once
+# and skips, rather than failing the play.
+plymouth_applicable: ~
+
+# Theme for the default.plymouth alternative. "text" = no graphical splash
+# during boot stages 3-4 (initramfs + systemd). Pairs with the grub role
+# dropping 'splash' from the kernel cmdline.
+# Restore the stock Kubuntu splash with: plymouth_theme: kubuntu-logo
+plymouth_theme: "text"
+
+# NOTE: the plymouth package is intentionally KEPT installed — the /space LUKS
+# volume (cryptroot) prompts for its passphrase at boot via the ask-password
+# path. Without 'splash' that prompt is plain console text, which is fine;
+# purging plymouth would drag in KDE integration removals for no gain.

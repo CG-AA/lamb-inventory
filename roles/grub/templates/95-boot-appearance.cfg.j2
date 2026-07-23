@@ -1,0 +1,18 @@
+# Managed by Ansible — roles/grub (lamb-inventory). Do not edit by hand.
+# Sourced by grub-mkconfig after /etc/default/grub and 90-lamb-machine.cfg,
+# before kdump-tools.cfg (which appends crashkernel= to the cmdline below).
+GRUB_CMDLINE_LINUX_DEFAULT="{{ grub_cmdline_default }}"
+GRUB_GFXMODE={{ grub_gfxmode }}
+{% if grub_show_menu | bool %}
+GRUB_TIMEOUT_STYLE=menu
+GRUB_TIMEOUT={{ grub_menu_timeout }}
+{% else %}
+GRUB_TIMEOUT_STYLE=hidden
+GRUB_TIMEOUT={{ grub_hidden_timeout }}
+{% endif %}
+{% if grub_background_enabled | bool and _grub_background_ready | default(false) %}
+GRUB_BACKGROUND={{ grub_background_dest }}
+{% endif %}
+{% if grub_disable_os_prober | bool %}
+GRUB_DISABLE_OS_PROBER=true
+{% endif %}

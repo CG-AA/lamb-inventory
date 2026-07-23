@@ -1,0 +1,145 @@
+---
+# fontconfig (fc-cache, /etc/fonts/conf.d) is Priority: optional and absent on
+# server/minimal images; xz-utils is needed to unpack the .tar.xz. Both are
+# already present on a desktop install, so this is a no-op there.
+- name: Install font tooling
+  become: true
+  ansible.builtin.apt:
+    name:
+      - fontconfig
+      - xz-utils
+    state: present
+    update_cache: true
+    cache_valid_time: 3600   # skip the mirror round-trip if apt refreshed recently
+
+# ---- Install the pinned Nerd Font release ----------------------------------
+# The stamp is written LAST, after a successful extract, so it marks a complete
+# install rather than an attempted one. Bumping fonts_nerd_version changes
+# fonts_install_dir -> no stamp -> fresh install; the superseded directory is
+# swept below.
+- name: Check for an existing install of {{ fonts_nerd_version }}
+  ansible.builtin.stat:
+    path: "{{ fonts_install_dir }}/.ansible-stamp"
+  register: _fonts_stamp
+
+- name: Install JetBrainsMono Nerd Font {{ fonts_nerd_version }}
+  become: true
+  when: not _fonts_stamp.stat.exists
+  block:
+    - name: Create the versioned font directory
+      ansible.builtin.file:
+        path: "{{ fonts_install_dir }}"
+        state: directory
+        mode: "0755"
+
+    # Downloads on the target host (no delegate_to), so this works unchanged
+    # for remote machines. The checksum makes the pin meaningful.
+    - name: Download the release archive
+      ansible.builtin.get_url:
+        url: "{{ fonts_nerd_url }}"
+        dest: "{{ fonts_download_dest }}"
+        checksum: "{{ fonts_nerd_checksum }}"
+        mode: "0644"
+
+    # The archive is flat, so extract straight into the versioned directory.
+    # extra_opts lands after tar's own options, where non-option arguments are
+    # member patterns — that is what filters 96 ttfs down to the base family.
+    - name: Extract the selected font files
+      ansible.builtin.unarchive:
+        src: "{{ fonts_download_dest }}"
+        remote_src: true
+        dest: "{{ fonts_install_dir }}"
+        extra_opts: "{{ ['--wildcards'] + fonts_nerd_extract }}"
+      notify: Refresh font cache
+
+    - name: Write the install stamp
+      ansible.builtin.copy:
+        content: |
+          Managed by Ansible — roles/fonts (lamb-inventory). Do not edit.
+          Presence of this file marks {{ fonts_nerd_version }} as fully installed.
+          {{ fonts_nerd_archive }} {{ fonts_nerd_version }}
+          {{ fonts_nerd_checksum }}
+        dest: "{{ fonts_install_dir }}/.ansible-stamp"
+        mode: "0644"
+
+    - name: Remove the downloaded archive
+      ansible.builtin.file:
+        path: "{{ fonts_download_dest }}"
+        state: absent
+
+# ---- Sweep superseded versions ---------------------------------------------
+# Scoped to our own jetbrains-mono-nerd-* directories, so it can never touch
+# fonts installed by hand or by a package.
+- name: Find installed Nerd Font versions
+  become: true
+  ansible.builtin.find:
+    paths: "{{ fonts_install_root }}"
+    patterns: "jetbrains-mono-nerd-*"
+    file_type: directory
+  register: _fonts_versions
+  when: fonts_cleanup_old_versions | bool
+
+- name: Remove superseded Nerd Font versions
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: >-
+    {{ _fonts_versions.files | default([]) | map(attribute='path')
+       | reject('eq', fonts_install_dir) | list }}
+  when: fonts_cleanup_old_versions | bool
+  notify: Refresh font cache
+
+# ---- fontconfig: monospace -> Nerd Font ------------------------------------
+# This is the desktop-agnostic half of the role and does the real work: every
+# app that asks for the generic "monospace" family gets the Nerd Font, whatever
+# the desktop environment. No handler — conf.d files are parsed by each app at
+# startup; fc-cache only indexes font FILES.
+- name: Deploy the fontconfig monospace preference
+  become: true
+  ansible.builtin.template:
+    src: 52-jetbrains-mono-nerd.conf.j2
+    dest: "{{ fonts_fontconfig_dropin }}"
+    mode: "0644"
+    backup: true
+  when: fonts_set_fontconfig_default | bool
+
+# ---- KDE Plasma fixed-width font -------------------------------------------
+# Plasma's Fonts KCM stores a concrete family, not the generic alias, so the
+# fontconfig drop-in alone does not move it. Detect Plasma by /usr/bin/plasmashell
+# (same probe as roles/kitty/tasks/desktop.yml); on GNOME/Xfce/headless hosts
+# this block skips and the fontconfig alias is all that applies.
+- name: Detect KDE Plasma
+  ansible.builtin.stat:
+    path: /usr/bin/plasmashell
+  register: _fonts_plasmashell
+
+- name: Set the Plasma fixed-width font
+  become: false          # this is *your* dotfile, never root's
+  when:
+    - fonts_set_kde_fixed | bool
+    - _fonts_plasmashell.stat.exists
+  block:
+    - name: Locate the user's kdeglobals
+      ansible.builtin.set_fact:
+        _fonts_kdeglobals: "{{ fonts_kde_config_dir }}/kdeglobals"
+
+    # Write with KDE's own CLI — the same edit System Settings -> Text & Fonts
+    # makes. kwriteconfig6 always rewrites, so gate it behind a read of the
+    # current value to keep re-runs green.  # noqa: command-instead-of-module
+    - name: Read the current Plasma fixed-width font
+      ansible.builtin.command:
+        argv: [kreadconfig6, --file, "{{ _fonts_kdeglobals }}",
+               --group, General, --key, fixed]
+      register: _fonts_kde_fixed
+      changed_when: false
+      failed_when: false      # missing key -> empty stdout, treated as "needs set"
+      check_mode: false       # read-only, safe under --check
+
+    - name: Set the Plasma fixed-width font with kwriteconfig6  # noqa: command-instead-of-module
+      ansible.builtin.command:
+        argv: [kwriteconfig6, --file, "{{ _fonts_kdeglobals }}",
+               --group, General, --key, fixed, "{{ fonts_kde_font_string }}"]
+      changed_when: true      # only reached when the value actually differs
+      when: _fonts_kde_fixed.stdout | trim != fonts_kde_font_string
+      # Running apps pick this up on their next launch; a re-login guarantees it.

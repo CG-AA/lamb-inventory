@@ -1,0 +1,53 @@
+---
+# ---- Behaviour toggles -----------------------------------------------------
+grub_manage: true                # false = leave the boot loader entirely alone
+
+# Whether GRUB can actually be configured here. Leave null to autodetect
+# (update-grub + /boot/grub present), or force it per-host in inventory/host_vars:
+#   grub_applicable: false   # never touch the boot loader on this machine
+# Containers, cloud images and systemd-boot hosts autodetect to false: the role
+# then warns once and skips, rather than failing the play.
+grub_applicable: ~
+
+# ---- Drop-in ownership ----------------------------------------------------
+# The ONLY file this role writes under /etc/default is its own drop-in.
+# /etc/default/grub itself is never touched; grub-mkconfig sources it first,
+# then grub.d/*.cfg in glob order, so later files win per-key.
+# Sort order matters and is load-bearing:
+#   90-lamb-machine.cfg   (lamb-machine tool's file — never touch)
+#   95-boot-appearance.cfg (ours; menu keys beat 90's)
+#   kdump-tools.cfg       (package; APPENDS crashkernel= to our cmdline after us)
+# No grub package ships the grub.d directory itself; the role creates it (that
+# is enough — grub-mkconfig sources the directory whenever it exists).
+grub_dropin_path: /etc/default/grub.d/95-boot-appearance.cfg
+
+# ---- Kernel cmdline --------------------------------------------------------
+# No 'splash' -> Plymouth never draws a graphical splash (stages 3-4 stay text).
+# kdump-tools.cfg appends crashkernel= afterwards, so don't list it here.
+grub_cmdline_default: "quiet"
+
+# ---- Menu visibility -------------------------------------------------------
+grub_show_menu: false            # false = hidden; reveal with Shift/Esc during boot
+grub_menu_timeout: 5             # seconds the menu stays up when grub_show_menu: true
+grub_hidden_timeout: 1           # hidden Esc/Shift check window; 0 = fastest boot but
+                                 # UEFI Esc-catching gets flaky — keep 1 for reliability
+
+# ---- Graphics / background -------------------------------------------------
+# Background shows whenever the menu is displayed (revealed or visible).
+grub_gfxmode: "auto"             # per-machine override lives in host_vars/
+grub_background_enabled: true
+grub_background_src: "grub-background.png"        # drop image into roles/grub/files/
+grub_background_dest: /boot/grub/lamb-background.png
+
+# ---- Absorbed from the manual 99-migration.cfg ------------------------------
+grub_disable_os_prober: true
+
+# ---- Legacy manual drop-ins this role retires (settings absorbed above) -----
+grub_legacy_dropins:
+  - /etc/default/grub.d/99-migration.cfg
+
+# Full revert: delete {{ grub_dropin_path }} and run `update-grub`.
+# Override examples (inventory/host_vars):
+#   grub_show_menu: true         # visible 5s menu again (lamb-machine parity)
+#   grub_background_enabled: false
+#   grub_gfxmode: "1920x1200"    # a specific panel resolution (see host_vars/cracker.yml)
