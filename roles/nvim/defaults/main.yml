@@ -1,0 +1,23 @@
+---
+# ---- Behaviour toggles ---------------------------------------------------
+nvim_set_default: true           # register nvim as the `editor` alternative
+
+# Extra alternatives to also point at nvim (beyond `editor`). Add "vi"/"vim"
+# to hijack those commands too; left minimal so real vim isn't shadowed.
+nvim_alternatives:
+  - editor
+  # - vi
+  # - vim
+
+# Where Neovim reads its config (per-user, like the kitty role).
+# Override when provisioning as root: nvim_config_dir: /home/lamb/.config/nvim
+nvim_config_dir: "{{ ansible_facts['user_dir'] }}/.config/nvim"
+
+# ---- Settings rendered into init.lua.j2 ----------------------------------
+nvim_tabstop: 4
+nvim_shiftwidth: 4
+nvim_expandtab: true             # insert spaces instead of tab characters
+nvim_relative_number: true
+nvim_termguicolors: true
+nvim_scrolloff: 8
+nvim_clipboard: "unnamedplus"    # "" keeps nvim's own clipboard; unnamedplus = system clipboard

@@ -1,0 +1,6 @@
+---
+- name: Refresh font cache  # noqa: command-instead-of-module (no module rebuilds fontconfig caches)
+  become: true
+  ansible.builtin.command:
+    argv: [fc-cache, -f]
+  changed_when: true

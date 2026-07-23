@@ -1,0 +1,68 @@
+---
+# ---- Applicability gate ----------------------------------------------------
+# Plymouth is absent on containers and minimal images, and initramfs-tools is
+# what actually carries the theme into the initramfs. Probe both, warn, and
+# skip — never fail. Same null-autodetect contract as grub_applicable.
+- name: Detect whether Plymouth can be configured on this host
+  when: plymouth_manage | bool and plymouth_applicable is none
+  block:
+    - name: Check for the Plymouth themes directory
+      ansible.builtin.stat:
+        path: /usr/share/plymouth/themes
+      register: _plymouth_themes_dir
+
+    - name: Check for update-initramfs
+      ansible.builtin.stat:
+        path: /usr/sbin/update-initramfs
+      register: _plymouth_update_initramfs
+
+    - name: Decide plymouth-applicable from the detected signals
+      ansible.builtin.set_fact:
+        plymouth_applicable: >-
+          {{ _plymouth_themes_dir.stat.isdir | default(false)
+             and _plymouth_update_initramfs.stat.exists }}
+
+    - name: Warn that Plymouth is not configurable here
+      ansible.builtin.debug:
+        msg: >-
+          Plymouth not usable on this host (themes directory or update-initramfs
+          missing) — plymouth role skipped, boot splash left as-is. Force with
+          plymouth_applicable: true in inventory/host_vars if this is wrong.
+      when: not plymouth_applicable | bool
+
+- name: Configure the Plymouth boot splash
+  # plymouth_manage first so Jinja short-circuits: plymouth_applicable may still
+  # be null when the role is disabled, and `none | bool` is deprecated.
+  when: plymouth_manage | bool and plymouth_applicable | bool
+  block:
+    # plymouth-set-default-theme does not exist on this install; the real lever
+    # is the default.plymouth alternative (initramfs-tools copies whatever it
+    # points at into the initramfs on rebuild).
+    - name: Resolve the requested Plymouth theme file
+      ansible.builtin.set_fact:
+        _plymouth_theme_file: >-
+          /usr/share/plymouth/themes/{{ plymouth_theme }}/{{ plymouth_theme }}.plymouth
+
+    - name: Check the requested theme is installed
+      ansible.builtin.stat:
+        path: "{{ _plymouth_theme_file }}"
+      register: _plymouth_theme
+
+    # Warn rather than fail: a host missing one theme package should not abort
+    # the whole play, it should just keep the splash it already has.
+    - name: Warn when the theme package is missing
+      ansible.builtin.debug:
+        msg: >-
+          Plymouth theme '{{ plymouth_theme }}' not found at
+          {{ _plymouth_theme_file }} — theme left unchanged. Install its package
+          (e.g. plymouth-theme-{{ plymouth_theme }}) or pick another theme.
+      when: not _plymouth_theme.stat.exists
+
+    - name: Point the default.plymouth alternative at theme {{ plymouth_theme }}
+      become: true
+      community.general.alternatives:
+        name: default.plymouth
+        link: /usr/share/plymouth/themes/default.plymouth
+        path: "{{ _plymouth_theme_file }}"   # explicit path = manual selection, survives auto
+      when: _plymouth_theme.stat.exists
+      notify: Update initramfs

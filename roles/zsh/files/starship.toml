@@ -1,0 +1,18 @@
+format = """${custom.badapple}${custom.host_remote}$directory$git_branch$git_status$character"""
+
+# Bad Apple!! frame, fed by the precmd hook in ~/.zshbadapple. The hook exports
+# BADAPPLE_SEG only inside kitty, off SSH, and where the frames were deployed —
+# everywhere else the `when` test fails and the segment disappears.
+[custom.badapple]
+when = 'test -n "$BADAPPLE_SEG"'
+command = 'printf "%s" "$BADAPPLE_SEG"'
+format = '$output '
+
+# user@host, but only over SSH. Locally the animation is the identity segment;
+# remotely the hook suppresses itself and this takes over, so exactly one of the
+# two ever renders.
+[custom.host_remote]
+when = 'test -n "$SSH_TTY"'
+command = 'printf "%s@%s" "$USER" "$(hostname -s)"'
+style = "bold yellow"
+format = '[$output]($style) '

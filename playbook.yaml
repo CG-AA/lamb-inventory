@@ -1,0 +1,33 @@
+---
+- name: Development base
+  hosts: development
+  gather_facts: true      # needed for ansible_user_dir (home of the target user)
+  # Every role carries its own tag; the boot trio shares `boot`. Re-run a slice
+  # with e.g. `ansible-playbook playbook.yaml --tags boot` (or --tags kitty).
+  roles:
+    # UTF-8 base: generated locales + LANG, drops the blanket LC_ALL
+    - role: locale
+      tags: [locale]
+    # JetBrainsMono Nerd Font + monospace wiring (fontconfig/Plasma)
+    - role: fonts
+      tags: [fonts]
+    - role: kitty
+      tags: [kitty]
+    - role: nvim
+      tags: [nvim]
+    # boot appearance: cmdline (no splash), hidden menu, background
+    - role: grub
+      tags: [grub, boot]
+    # splash off via text theme (package kept for the LUKS prompt)
+    - role: plymouth
+      tags: [plymouth, boot]
+    # Lenovo LBLDESP scaffold — DMI-gated, firmware write deferred
+    - role: bootlogo
+      tags: [bootlogo, boot]
+    # zsh + plugins + starship prompt and the shared shell dotfiles; the 26 MB
+    # bad-apple frame set only lands where zsh_badapple is true (host_vars)
+    - role: zsh
+      tags: [zsh]
+    # add more roles here as you modularise the rest of your setup, e.g.:
+    # - git
+    # - dialout   # the `usermod -aG dialout` note in tmp.txt

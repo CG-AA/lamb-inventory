@@ -1,0 +1,112 @@
+---
+- name: Install zsh and its prompt plugins
+  become: true
+  ansible.builtin.apt:
+    name:
+      - zsh
+      - zsh-autosuggestions        # /usr/share/zsh-autosuggestions/... sourced by .zshrc
+      - zsh-syntax-highlighting    # /usr/share/zsh-syntax-highlighting/... sourced LAST
+      - rsync                      # required on the target by the frame sync below
+    state: present
+    update_cache: true
+    cache_valid_time: 3600   # skip the mirror round-trip if apt refreshed recently
+
+# starship is missing from older Debian stable, so ask apt before installing
+# rather than failing the run on a host that simply cannot have it.
+- name: Check whether apt knows about starship
+  ansible.builtin.command: apt-cache policy starship
+  register: _zsh_starship_policy
+  changed_when: false
+  check_mode: false
+  when: zsh_install_starship | bool
+
+- name: Install the starship prompt
+  become: true
+  ansible.builtin.apt:
+    name: starship
+    state: present
+  when:
+    - zsh_install_starship | bool
+    - _zsh_starship_policy.stdout is defined
+    - "'Candidate: (none)' not in _zsh_starship_policy.stdout"
+
+- name: Warn that starship is not packaged on this host
+  ansible.builtin.debug:
+    msg: >-
+      apt has no starship package here (older Debian stable does not ship one)
+      — zsh falls back to its plain default prompt, and the bad-apple segment
+      has nowhere to render. The deployed .zshrc guards the init call, so shell
+      startup stays clean. Install starship by hand, or set
+      zsh_install_starship: false to silence this.
+  when:
+    - zsh_install_starship | bool
+    - _zsh_starship_policy.stdout is defined
+    - "'Candidate: (none)' in _zsh_starship_policy.stdout"
+
+- name: Make zsh the login shell for {{ zsh_login_user }}
+  become: true
+  ansible.builtin.user:
+    name: "{{ zsh_login_user }}"
+    shell: "{{ zsh_shell_path }}"
+  when: zsh_set_default_shell | bool
+
+- name: Deploy the shell dotfiles from the role (source of truth)
+  become: false          # these are *your* dotfiles, never root's
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ zsh_home }}/{{ item.dest }}"
+    mode: "0644"
+    backup: true         # keeps any pre-existing file on first run, so nothing is lost
+  loop:
+    - {src: zshrc, dest: .zshrc}
+    - {src: shell_common, dest: .shell_common}    # shell-agnostic aliases/PATH, also for bash
+    - {src: bashrc_lamb, dest: .bashrc_lamb}      # pyenv/cargo PATH + personal aliases
+    - {src: zshbadapple, dest: .zshbadapple}      # self-guarding: no-ops without frames
+  loop_control:
+    label: "{{ item.dest }}"
+
+- name: Ensure the user config directory exists
+  become: false
+  ansible.builtin.file:
+    path: "{{ zsh_home }}/.config"
+    state: directory
+    mode: "0755"
+
+# Deployed even when starship was skipped above: the file is inert without the
+# binary and becomes correct the moment starship appears.
+- name: Deploy starship.toml from the role (source of truth)
+  become: false
+  ansible.builtin.copy:
+    src: starship.toml
+    dest: "{{ zsh_home }}/.config/starship.toml"
+    mode: "0644"
+    backup: true
+
+- name: Deploy the Bad Apple frame set
+  when: zsh_badapple | bool
+  become: false
+  block:
+    - name: Ensure the badapple directory exists
+      ansible.builtin.file:
+        path: "{{ zsh_badapple_dir }}"
+        state: directory
+        mode: "0755"
+
+    # rsync, not ansible.builtin.copy: 6524 files compare by size+mtime in one
+    # pass instead of a per-file checksum + transfer on every run. `delete` is
+    # safe because esc/ is wholly role-owned -- the mutable .n lives in the
+    # parent directory and is never inside the synced tree.
+    - name: Synchronise the frames into the user's home
+      ansible.posix.synchronize:
+        src: "{{ role_path }}/files/badapple/esc/"   # trailing slash: contents, not the dir
+        dest: "{{ zsh_badapple_dir }}/esc"
+        delete: true
+
+    # .n is runtime state, rewritten by the precmd hook on every prompt.
+    # force: false = create if absent, then never touch it again.
+    - name: Initialise the frame counter
+      ansible.builtin.copy:
+        content: "0\n"
+        dest: "{{ zsh_badapple_dir }}/.n"
+        mode: "0644"
+        force: false

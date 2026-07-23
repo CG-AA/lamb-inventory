@@ -1,0 +1,70 @@
+# Set up the prompt
+
+autoload -Uz promptinit
+promptinit
+# prompt adam1   # DISABLED: prompt_adam1_precmd re-set PS1 (== PROMPT) on every
+                 # precmd, clobbering starship's prompt (and the bad-apple segment).
+
+setopt histignorealldups sharehistory
+
+# Use emacs keybindings even if our EDITOR is set to vi
+bindkey -e
+
+# Keep 1000 lines of history within the shell and save it to ~/.zsh_history:
+HISTSIZE=100000
+SAVEHIST=100000
+HISTFILE=~/.zsh_history
+
+# Use modern completion system
+autoload -Uz compinit
+compinit
+
+zstyle ':completion:*' auto-description 'specify: %d'
+zstyle ':completion:*' completer _expand _complete _correct _approximate
+zstyle ':completion:*' format 'Completing %d'
+zstyle ':completion:*' group-name ''
+zstyle ':completion:*' menu select=2
+eval "$(dircolors -b)"
+zstyle ':completion:*:default' list-colors ${(s.:.)LS_COLORS}
+zstyle ':completion:*' list-colors ''
+zstyle ':completion:*' list-prompt %SAt %p: Hit TAB for more, or the character to insert%s
+zstyle ':completion:*' matcher-list '' 'm:{a-z}={A-Z}' 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=* l:|=*'
+zstyle ':completion:*' menu select=long
+zstyle ':completion:*' select-prompt %SScrolling active: current selection at %p%s
+zstyle ':completion:*' use-compctl false
+zstyle ':completion:*' verbose true
+
+zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#)*=0=01;31'
+zstyle ':completion:*:kill:*' command 'ps -u $USER -o pid,%cpu,tty,cputime,cmd'
+
+# ---- shared, portable config ----
+[ -f ~/.shell_common ] && source ~/.shell_common
+
+# ---- history behaviour (extends the HIST* vars in the default block) ----
+setopt SHARE_HISTORY        # share across concurrent sessions
+setopt HIST_IGNORE_DUPS     # skip a line identical to the previous
+setopt HIST_IGNORE_SPACE    # leading space keeps a command out of history
+setopt EXTENDED_HISTORY     # record timestamps
+
+# ---- extra QoL ----
+setopt INTERACTIVE_COMMENTS # allow # comments at the prompt
+# NOTE: AUTO_CD not repeated here — `autocd` is already in the default block
+
+# ---- completion styling (compinit already ran above) ----
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+zstyle ':completion:*' menu select   # arrow-key navigable menu
+
+# ---- plugins: autosuggestions BEFORE syntax-highlighting ----
+source /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh 2>/dev/null
+
+# ---- prompt ----
+# Guarded: starship is not packaged on older Debian stable. Without it zsh just
+# uses its plain default prompt instead of erroring on every launch.
+command -v starship >/dev/null 2>&1 && eval "$(starship init zsh)"
+
+[ -f ~/.bashrc_lamb ] && source ~/.bashrc_lamb
+
+[ -f ~/.zshbadapple ] && source ~/.zshbadapple
+
+# ---- syntax highlighting MUST be sourced LAST ----
+source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh 2>/dev/null

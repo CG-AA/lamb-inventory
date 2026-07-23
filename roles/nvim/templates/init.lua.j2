@@ -1,0 +1,28 @@
+-- =============================================================================
+--  Managed by Ansible — roles/nvim/templates/init.lua.j2
+--  Edit the template/vars and re-run the playbook, not ~/.config/nvim/init.lua.
+--  (An init.lua.<ts>~ backup is kept on the first deploy.)
+-- =============================================================================
+
+local opt = vim.opt
+
+-- Indentation
+opt.tabstop = {{ nvim_tabstop }}
+opt.shiftwidth = {{ nvim_shiftwidth }}
+opt.expandtab = {{ nvim_expandtab | ternary('true', 'false') }}
+
+-- Line numbers
+opt.number = true
+opt.relativenumber = {{ nvim_relative_number | ternary('true', 'false') }}
+
+-- Appearance & behaviour
+opt.termguicolors = {{ nvim_termguicolors | ternary('true', 'false') }}
+opt.scrolloff = {{ nvim_scrolloff }}
+{% if nvim_clipboard %}
+opt.clipboard = "{{ nvim_clipboard }}"
+{% endif %}
+
+-- ---- Your personal config below ---------------------------------------------
+-- Keymaps, plugins (lazy.nvim/packer), LSP, etc. Plain Lua passes through Jinja
+-- verbatim, so you can paste an existing init.lua wholesale and parameterise bits
+-- later. To split into modules, `require("...")` files under lua/ in this dir.

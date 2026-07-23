@@ -1,0 +1,25 @@
+---
+# ---- Behaviour toggles ---------------------------------------------------
+# kitty_has_de is auto-detected (systemd graphical.target / display manager).
+# Leave it unset for autodetect, or force it per-host in inventory/host_vars:
+#   kitty_has_de: true    # treat as desktop -> full kitty
+#   kitty_has_de: false   # treat as headless -> terminfo only
+
+kitty_set_default: true          # register kitty as x-terminal-emulator and select it
+
+# Plasma-only: actively displace Konsole in favour of kitty --
+#   * drop the Konsole taskbar pin
+#   * disable Konsole's built-in Ctrl+Alt+T launch shortcut
+#   * bind kitty to `kitty_launch_shortcut` instead
+# Only applies on KDE Plasma hosts, and (like all shortcut/panel changes) only
+# takes effect on the user's next login. Set false to leave Konsole alone.
+kitty_replace_konsole: true
+kitty_launch_shortcut: "Meta+Return"   # global hotkey to launch kitty
+
+# Where kitty reads its config. Defaults to the *connecting* user's home.
+# Override (e.g. when provisioning a box as root) with the real login user:
+#   kitty_config_dir: /home/lamb/.config/kitty
+kitty_config_dir: "{{ ansible_facts['user_dir'] }}/.config/kitty"
+
+# kitty.conf is deployed verbatim from files/kitty.conf (ansible.builtin.copy).
+# It is the single source of truth; edit that file to change kitty settings.

@@ -1,0 +1,43 @@
+---
+# Dispatcher: detect whether the host has a desktop environment, then branch.
+# Desktop  -> full kitty (desktop.yml).   Headless -> terminfo only (terminfo.yml).
+# Override the autodetect per-host by setting `kitty_has_de: true|false` in
+# inventory/host_vars.
+
+- name: Detect desktop environment
+  when: kitty_has_de is not defined
+  block:
+    - name: Check the systemd default target  # noqa: command-instead-of-module
+      # No module covers `systemctl get-default` (the systemd module only
+      # manages a single unit's state); this is a read-only query.
+      ansible.builtin.command: systemctl get-default
+      register: _kitty_default_target
+      changed_when: false
+      failed_when: false      # non-systemd hosts just fall through to "headless"
+      check_mode: false       # read-only, so run even under --check
+
+    - name: Check for an installed display manager
+      ansible.builtin.stat:
+        path: /etc/systemd/system/display-manager.service
+      register: _kitty_dm
+
+    - name: Decide has-DE from the detected signals
+      ansible.builtin.set_fact:
+        kitty_has_de: >-
+          {{ (_kitty_default_target.stdout == 'graphical.target')
+             or _kitty_dm.stat.exists }}
+
+- name: Report what will be installed
+  ansible.builtin.debug:
+    msg: >-
+      kitty_has_de={{ kitty_has_de }} =>
+      {{ 'full kitty + default terminal + config' if kitty_has_de | bool
+         else 'kitty-terminfo only (headless)' }}
+
+- name: Desktop setup
+  ansible.builtin.include_tasks: desktop.yml
+  when: kitty_has_de | bool
+
+- name: Headless setup
+  ansible.builtin.include_tasks: terminfo.yml
+  when: not (kitty_has_de | bool)

@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
+<!--
+  Managed by Ansible — roles/fonts (lamb-inventory). Do not edit by hand.
+
+  Read after 51-local.conf (a hand-made /etc/fonts/local.conf still wins) and
+  before 56-language-selector-prefer.conf / 57-dejavu-sans-mono.conf, so this
+  <prefer> lands ahead of the distro's monospace default.
+
+  Revert: delete this file — apps pick it up on their next start, no fc-cache.
+-->
+<fontconfig>
+  <alias binding="strong">
+    <family>monospace</family>
+    <prefer>
+      <family>{{ fonts_family }}</family>
+    </prefer>
+  </alias>
+</fontconfig>

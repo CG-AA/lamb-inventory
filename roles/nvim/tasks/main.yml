@@ -1,0 +1,33 @@
+---
+- name: Install neovim
+  become: true
+  ansible.builtin.apt:
+    name: neovim
+    state: present
+    update_cache: true
+    cache_valid_time: 3600   # skip the mirror round-trip if apt refreshed recently
+
+- name: Make neovim the default editor
+  become: true
+  community.general.alternatives:
+    name: "{{ item }}"
+    link: "/usr/bin/{{ item }}"
+    path: /usr/bin/nvim
+    priority: 60          # > nano (40); `path` also forces manual selection
+  loop: "{{ nvim_alternatives }}"
+  when: nvim_set_default | bool
+
+- name: Ensure nvim config directory exists
+  become: false          # this is *your* dotfile, never root's
+  ansible.builtin.file:
+    path: "{{ nvim_config_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Deploy init.lua from the role (source of truth)
+  become: false
+  ansible.builtin.template:
+    src: init.lua.j2
+    dest: "{{ nvim_config_dir }}/init.lua"
+    mode: "0644"
+    backup: true         # keeps the previous file on first run, so nothing is lost
