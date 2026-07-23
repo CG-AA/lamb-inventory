@@ -15,6 +15,9 @@
       tags: [kitty]
     - role: nvim
       tags: [nvim]
+    # identity + init.defaultBranch in the user's global git config
+    - role: git
+      tags: [git]
     # boot appearance: cmdline (no splash), hidden menu, background
     - role: grub
       tags: [grub, boot]
@@ -29,5 +32,4 @@
     - role: zsh
       tags: [zsh]
     # add more roles here as you modularise the rest of your setup, e.g.:
-    # - git
     # - dialout   # the `usermod -aG dialout` note in tmp.txt
