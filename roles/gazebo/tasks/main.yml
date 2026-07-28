@@ -1,0 +1,9 @@
+---
+# SCAFFOLD — no tasks yet, so the role is a no-op on every host.
+#
+# Wired end-to-end already (defaults gate → `when:` in playbook.yaml → tags
+# [gazebo, robotics] → group_vars/robotics.yml switching it on), so adding the
+# real work means editing only this file.
+#
+# TODO: Gazebo install, plus a capability gate if it turns out to need a GPU or
+# a display — that probe belongs in roles/facts, not here (CLAUDE.md §3).

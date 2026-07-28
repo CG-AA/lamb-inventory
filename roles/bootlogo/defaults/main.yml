@@ -1,6 +1,9 @@
 ---
 # ---- Role gate -------------------------------------------------------------
-bootlogo_manage: true            # false = skip the role outright (see the
+# Pure decoration, so it is opt-in: false here and switched on by
+# group_vars/cosmetics.yml. The hardware gate below is separate and still
+# applies on top — policy vs capability, CLAUDE.md §2.
+bootlogo_manage: false           # false = skip the role outright (see the
                                  # hardware gate below for the per-machine one)
 
 # ---- Hardware gate ----------------------------------------------------------

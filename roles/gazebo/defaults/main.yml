@@ -1,0 +1,8 @@
+---
+# ---- Role gate -------------------------------------------------------------
+# OPT-IN role: default false, switched on by group_vars/robotics.yml. Same
+# reasoning as ros2-lyrical — a simulator is far too big to install by default.
+gazebo_manage: false
+
+# Full revert: `gazebo_manage: false` stops managing it; per CLAUDE.md §5 the
+# role never uninstalls. Removing an installed Gazebo is a hand-run one-off.

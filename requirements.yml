@@ -2,7 +2,10 @@
 # Install with: ansible-galaxy collection install -r requirements.yml
 collections:
   # provides the `alternatives` (default terminal/editor/plymouth theme),
-  # `locale_gen`, `ini_file` (Plasma shortcuts) and `git_config` modules
+  # `locale_gen`, `ini_file` (Plasma shortcuts), `git_config` and `npm`
+  # (roles/npm's global CLI installs — it checks `npm list --global` first, so
+  # it is idempotent AND accurate under --check, which `command: npm i -g`
+  # can never be) modules
   - name: community.general
   # provides `synchronize` (rsync) — the zsh role pushes its 6524-file bad-apple
   # frame tree with it; ansible.builtin.copy would checksum every file each run

@@ -1,0 +1,115 @@
+---
+# ---- Role gate ------------------------------------------------------------
+# OPT-IN role: default false, switched on by group_vars/development.yml. Node
+# is not a baseline tool — a box that only runs ROS has no use for a
+# JavaScript runtime — so per CLAUDE.md §2 a profile opts IN rather than a
+# class opting out.
+npm_manage: false
+
+# ---- Install source -------------------------------------------------------
+# The distro archive, deliberately. resolute/universe carries nodejs 22.22.1
+# and npm 9.2.0, and the nodejs package Depends on node-corepack, so
+# /usr/bin/corepack arrives with it.
+#
+# NOT NodeSource, and the reasons are measurements rather than taste:
+#   * this repo has no apt-repository precedent at all — no apt_repository, no
+#     deb822_repository, no keyring of ours in /etc/apt/keyrings. Every apt
+#     task in every role is a plain ansible.builtin.apt against the archive;
+#   * NodeSource has no suite for a brand-new codename. On 2026-07-28
+#     deb.nodesource.com/node_22.x/dists/resolute/Release was a 404 and
+#     .../dists/nodistro/Release a 200, so the source could not follow
+#     $UBUNTU_CODENAME the way /etc/apt/sources.list.d/docker.list does;
+#   * and it would be a SILENT no-op. apt takes the higher version, and dpkg
+#     agrees that 22.22.1+dfsg+~cs22.19.15-1ubuntu1 > 22.22.1-1nodesource1, so
+#     the archive keeps winning until upstream ships 22.23.0. Making
+#     NodeSource actually bite needs a keyring AND a deb822 source AND an
+#     /etc/apt/preferences.d pin: three new mechanisms for a newer npm minor.
+#
+# The cost of this choice, named honestly: Debian's npm is 9.2.0 (~ds3 =
+# de-vendored into ~70 separate node-* packages), not the 10.x that upstream
+# Node 22 bundles. That is fine for `npm install -g <cli>`, which is all this
+# role does. A global install failing in a way that traces back to the
+# de-vendoring is the trigger to revisit — and the revisit is keyring +
+# source + pin, not a second code path here.
+#
+# There is deliberately no `npm_install_method` switch. A second branch would
+# fork the package names, the prefix and the revert instructions at once, and
+# neither cracker nor glowing-glass would ever run it, so it would rot
+# unnoticed. Swapping source is an edit to this list plus new tasks — cheaper
+# than carrying a branch nobody exercises.
+#
+# `npm` has to be named explicitly: it is only a Suggests: of nodejs, so
+# installing nodejs alone leaves you with /usr/bin/node and no npm or npx.
+npm_apt_packages:
+  - nodejs        # /usr/bin/node + /usr/bin/nodejs; pulls in node-corepack
+  - npm           # /usr/bin/npm + /usr/bin/npx
+
+# ---- Paths ----------------------------------------------------------------
+# The *connecting* user's home — same override contract as nvim_config_dir.
+# When provisioning a box as root, name the real user:
+#   npm_home: /home/lamb
+npm_home: "{{ ansible_facts['user_dir'] }}"
+
+# npm's global prefix. ~/.local, NOT ~/.npm-global, because ~/.local/bin is
+# ALREADY on PATH three times over: roles/zsh's shell_common prepends it
+# (guarded), .bashrc_lamb prepends it again, and Ubuntu's stock ~/.profile
+# adds it at login — that last one is what puts it in the environment a
+# GUI-launched nvim inherits, which is the PATH lazy.nvim's non-interactive
+# `build` shell actually sees. So global CLIs land on PATH with no shell
+# change at all, and roles/npm never reaches into a file roles/zsh calls its
+# single source of truth. Modules go to ~/.local/lib/node_modules and man
+# pages to ~/.local/share/man; neither collides with pip --user.
+#
+# ABSOLUTE, never the string "~/.local": this is passed to `npm config set`
+# through argv with no shell to expand it, and `npm config get prefix` prints
+# a resolved path — a tilde would make the read-then-write guard in tasks/
+# permanently unequal, i.e. permanently `changed`.
+npm_prefix: "{{ npm_home }}/.local"
+
+# ---- Global CLI packages --------------------------------------------------
+# Data, not tasks. `state: present` means installed-if-missing and never
+# upgraded: CLAUDE.md §5 leave-in-place applied to a package list. Upgrading
+# is `npm update -g`, run by hand when you want it.
+#
+# Unpinned on purpose, unlike fonts_nerd_version. That pin exists because the
+# checksum beside it is the only integrity guarantee for an unsigned tarball;
+# these come from the registry over TLS with its own integrity metadata, and
+# pinning an interactive CLI buys nothing while guaranteeing the pin goes
+# stale. If you ever do need one, make this a list of {name:, version:} dicts
+# and pass item.version to the module's `version:` — do not smuggle
+# "pkg@1.2.3" into `name:`, which only works by accident today.
+npm_global_packages:
+  # yarn CLASSIC (1.22) — what the markdown-preview.nvim spec in
+  # roles/nvim/templates/init.lua.j2 needs. Its `build = "cd app && yarn
+  # install"` runs in a NON-interactive shell, so it needs a real `yarn` on
+  # PATH; a shell alias would never be consulted. Ubuntu's `yarnpkg` package
+  # cannot serve — it ships /usr/bin/yarnpkg and nothing named `yarn`.
+  - yarn
+
+# corepack is already installed here (nodejs Depends: node-corepack) but this
+# role does NOT enable it, deliberately, and yarn comes from the list above
+# instead. Two reasons: `corepack enable` writes its shims next to the node
+# binary — /usr/bin, root's namespace — unless given --install-directory, and
+# the shims are lazy downloaders that PROMPT on first use unless
+# COREPACK_ENABLE_DOWNLOAD_PROMPT=0 is exported. A prompt inside lazy.nvim's
+# build step is a hang with no terminal to answer it, and that env var would
+# need a shell hook this repo does not have yet. Corepack would also hand
+# markdown-preview yarn 4, where its app/yarn.lock wants yarn 1 classic.
+#
+# If you want Yarn Berry or pnpm later, the hand-run one-off is:
+#   corepack enable --install-directory ~/.local/bin yarn pnpm
+#   export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+# pnpm is not packaged in resolute at all, so npm -g is its only route here.
+#
+# Another candidate for this list: "@google/gemini-cli", which would make the
+# `gemini` alias in roles/zsh/files/bashrc_lamb resolve to something. Left out
+# for now — note that installing it also puts a real `gemini` on PATH, and an
+# alias is expanded BEFORE PATH lookup, so that alias would then shadow the
+# binary and send every call back through npx. Guard the alias if you add it.
+
+# Full revert: `npm_manage: false` stops managing it; per CLAUDE.md §5 the role
+# never uninstalls. By hand, through npm's own mechanism:
+#   npm ls -g --depth=0            # exactly what this role put there
+#   npm rm -g yarn
+#   npm config delete prefix       # drops the key from ~/.npmrc
+#   sudo apt remove npm nodejs     # only if nothing else on the box wants node

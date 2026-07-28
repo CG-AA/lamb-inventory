@@ -23,6 +23,44 @@ opt.clipboard = "{{ nvim_clipboard }}"
 {% endif %}
 
 -- ---- Your personal config below ---------------------------------------------
--- Keymaps, plugins (lazy.nvim/packer), LSP, etc. Plain Lua passes through Jinja
--- verbatim, so you can paste an existing init.lua wholesale and parameterise bits
--- later. To split into modules, `require("...")` files under lua/ in this dir.
+-- Keymaps, plugins, LSP, etc. Plain Lua passes through Jinja verbatim, so you
+-- can paste an existing init.lua wholesale and parameterise bits later. To
+-- split into modules, `require("...")` files under lua/ in this dir.
+
+-- ---- lazy.nvim bootstrap ----------------------------------------------------
+-- Clones lazy.nvim on first launch (needs git — roles/git installs it) and puts
+-- it on the runtimepath. Leaders MUST be set before require("lazy") runs: lazy
+-- captures them when it registers each plugin's keys.
+vim.g.mapleader = " "
+vim.g.maplocalleader = "\\"
+
+local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
+if not (vim.uv or vim.loop).fs_stat(lazypath) then
+  vim.fn.system({
+    "git", "clone", "--filter=blob:none", "--branch=stable",
+    "https://github.com/folke/lazy.nvim.git", lazypath,
+  })
+end
+vim.opt.rtp:prepend(lazypath)
+
+-- A plugin spec is a table INSIDE this call. Lua has no expression statements,
+-- so a bare `{ ... }` at file level is a syntax error, not a declaration.
+require("lazy").setup({
+  -- markdown-preview builds a small node server in its own app/ directory.
+  -- `build` runs in a NON-interactive shell, so `yarn` has to be a real binary
+  -- on PATH — a shell alias is never consulted. roles/npm installs yarn classic
+  -- 1.22 into ~/.local/bin, which is the yarn this plugin's app/yarn.lock was
+  -- written for (corepack would hand it yarn 4). On a host where roles/npm has
+  -- not run, lazy reports the build as failed and the rest of nvim still loads;
+  -- the yarn-free fallback is `build = function() vim.fn["mkdp#util#install"]() end`,
+  -- which fetches a prebuilt server binary instead.
+  {
+    "iamcco/markdown-preview.nvim",
+    cmd = { "MarkdownPreviewToggle", "MarkdownPreview", "MarkdownPreviewStop" },
+    ft = { "markdown" },
+    build = "cd app && yarn install",
+    init = function()
+      vim.g.mkdp_filetypes = { "markdown" }
+    end,
+  },
+})

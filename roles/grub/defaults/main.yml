@@ -48,7 +48,10 @@ grub_hidden_timeout: 1           # hidden Esc/Shift check window; 0 = fastest bo
 # ---- Graphics / background -------------------------------------------------
 # Background shows whenever the menu is displayed (revealed or visible).
 grub_gfxmode: "auto"             # per-machine override lives in host_vars/
-grub_background_enabled: true
+# Decoration, so it is opt-in: group_vars/cosmetics.yml turns it on for hosts
+# somebody actually looks at. The rest of the role stays baseline-managed —
+# the cmdline composition guard has to run everywhere, seat or no seat.
+grub_background_enabled: false
 grub_background_src: "grub-background.png"        # drop image into roles/grub/files/
 grub_background_dest: /boot/grub/lamb-background.png
 

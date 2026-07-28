@@ -1,0 +1,19 @@
+---
+# Profile policy for `development` hosts: this machine is used to write code.
+#
+# Most of what the dev profile wants — locale, git, nvim, zsh, kitty's
+# terminfo — is baseline (`<role>_manage: true` in its defaults) and needs
+# nothing here. This file carries the dev-only roles that aren't wanted
+# everywhere. Profiles only ever turn things ON (CLAUDE.md §1); if the urge is
+# to turn something off for dev boxes, that belongs in the class group.
+#
+# Future neighbours here: docker_manage: true / direnv_manage: true
+
+# Node.js + npm, and the user-global CLIs installed with them (yarn today).
+# Default false in roles/npm/defaults/main.yml — a box that only runs ROS has
+# no use for a JavaScript runtime. This line is what finally provides the yarn
+# that the markdown-preview.nvim spec in roles/nvim/templates/init.lua.j2
+# builds with, and the npx that the `gemini` alias in
+# roles/zsh/files/bashrc_lamb has been assuming since before anything in this
+# inventory installed node.
+npm_manage: true

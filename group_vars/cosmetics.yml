@@ -1,0 +1,36 @@
+---
+# Profile policy for `cosmetics` hosts: someone sits at this machine and looks
+# at it, so boot and prompt flourishes are worth the bytes and the boot time.
+#
+# This profile gates what the boot roles DRAW, never whether they RUN. grub and
+# plymouth stay baseline-managed everywhere: the composition guard at the end of
+# roles/grub/tasks/main.yml is what catches a drop-in eating another tool's
+# resume=/resume_offset= (it already happened once on glowing-glass), and that
+# protection has to keep running on hosts nobody ever looks at.
+#
+# Capability gates still have the last word — bootlogo's DMI match and
+# kitty_has_de can veto anything switched on here (CLAUDE.md §2).
+
+# GRUB menu background image. Default false: a box with no seat draws nothing.
+grub_background_enabled: true
+
+# Lenovo LBLDESP custom boot logo. Default false; the role's DMI gate still
+# decides whether this particular machine is a matching ThinkBook.
+bootlogo_manage: true
+
+# Bad Apple!! prompt animation (26 MB / 6524 kitty-graphics frames). Moved here
+# from host_vars/cracker.yml: wanting a prompt easter egg is a property of the
+# class of machine, not a truth about that one laptop.
+zsh_badapple: true
+
+# ---- Deliberately NOT set here ---------------------------------------------
+# grub_show_menu — the role default is already false (hidden) and
+#   group_vars/headless.yml flips it true. Setting it here too would put two
+#   same-depth groups on one var, where the winner is decided alphabetically.
+#
+# plymouth_theme — a graphical theme only ever draws if 'splash' is on the
+#   kernel cmdline, and roles/grub deliberately strips it. Re-enabling the splash
+#   is a paired change that belongs together, in this file:
+#     plymouth_theme: kubuntu-logo
+#     grub_cmdline_add: "quiet splash"     # and drop 'splash' from
+#     grub_cmdline_remove: [quiet]         # grub_cmdline_remove, or it is stripped

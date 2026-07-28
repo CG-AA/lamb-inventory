@@ -1,4 +1,14 @@
-format = """${custom.badapple}${custom.host_remote}$directory$git_branch$git_status$character"""
+# Setting `format` REPLACES starship's default entirely — a module that is
+# enabled but not named here never renders. $nodejs is why it is spelled out.
+# The nodejs module only draws in a directory holding package.json,
+# .node-version, node_modules or a js/mjs/cjs/ts source, so it costs nothing
+# elsewhere; its default format is `via [$symbol($version )]($style)` and the
+# symbol is a Nerd Font glyph. That is fine on cracker (roles/fonts) and fine
+# over SSH to glowing-glass, where the glyph is rasterised by the terminal you
+# connect FROM — the same reasoning as group_vars/headless.yml's fonts_manage.
+# Silence it per host with `[nodejs] disabled = true` if the `node --version`
+# call ever costs more than it is worth.
+format = """${custom.badapple}${custom.host_remote}$directory$git_branch$git_status$nodejs$character"""
 
 # Bad Apple!! frame, fed by the precmd hook in ~/.zshbadapple. The hook exports
 # BADAPPLE_SEG only inside kitty, off SSH, and where the frames were deployed —

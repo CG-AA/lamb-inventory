@@ -16,8 +16,8 @@ zsh_set_default_shell: true
 zsh_install_starship: true
 
 # Bad Apple!! identity segment: 26 MB / 6524 kitty-graphics frames rendered
-# into the prompt by a precmd hook. Default OFF -- it is a per-machine easter
-# egg, not base shell config; forced true in host_vars/cracker.yml.
+# into the prompt by a precmd hook. Default OFF -- it is an easter egg, not base
+# shell config; switched on by group_vars/cosmetics.yml (hosts with a seat).
 #
 # The hook file (~/.zshbadapple) deploys everywhere regardless, because it
 # self-guards: it no-ops outside kitty, over SSH, and when ~/.badapple/esc is

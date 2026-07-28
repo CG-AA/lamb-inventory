@@ -1,0 +1,9 @@
+---
+# Profile policy for `robotics` hosts: this machine runs ROS 2 workloads.
+#
+# Both roles default to false in their own defaults/main.yml — nothing installs
+# a distro-sized ROS stack unless a host asked for it. Turning them on here is
+# what makes `robotics` mean something; the roles are still empty scaffolds and
+# no-op until their tasks are written.
+ros2_lyrical_manage: true
+gazebo_manage: true

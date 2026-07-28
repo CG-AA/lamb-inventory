@@ -7,7 +7,6 @@
 # best mode on hardware we know nothing about.
 grub_gfxmode: "1920x1200"
 
-# This laptop gets the Bad Apple!! kitty animation (26 MB of frames synced to
-# ~/.badapple). The role default is false, so a VM, container or server gets
-# plain zsh + starship and the hook/prompt segment quietly no-op.
-zsh_badapple: true
+# NOTE: zsh_badapple moved to group_vars/cosmetics.yml. Wanting a prompt easter
+# egg is a class-of-machine choice, not a fact about this panel or chassis —
+# only the latter belongs in host_vars/.

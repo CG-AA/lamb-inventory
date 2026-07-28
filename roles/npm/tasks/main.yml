@@ -1,0 +1,112 @@
+---
+# ---- Node + npm from the distro archive -----------------------------------
+# nodejs Depends on node-corepack, so /usr/bin/corepack lands too; npm is only
+# a Suggests: of nodejs, so it has to be named explicitly or `npm` and `npx`
+# never appear at all. No apt-cache policy probe here, unlike roles/zsh's
+# starship dance: starship is genuinely missing from Debian bookworm, whereas
+# nodejs and npm have been in every Debian and Ubuntu release for a decade.
+# Copying that probe would be ritual, not defence.
+#
+# install_recommends: false trims the set from 397 packages / 223 MB to
+# 358 / 177 MB, and every one of the 39 it drops is something npm never
+# executes: nodejs-doc (20 MB of offline API HTML), wabt (23 MB — a C++
+# WebAssembly toolchain, recommended by node-webassemblyjs), and node-tap /
+# node-coveralls / node-istanbul, which are npm's own test suite. Two hard
+# dependencies were checked before setting this and are NOT lost:
+# ca-certificates is a Depends: of npm (registry TLS still works), and git —
+# an npm Recommends, needed for `npm install` off a git URL — is installed
+# everywhere by the baseline roles/git anyway.
+- name: Install Node.js and npm
+  become: true
+  ansible.builtin.apt:
+    name: "{{ npm_apt_packages }}"
+    state: present
+    install_recommends: false
+    update_cache: true
+    cache_valid_time: 3600   # skip the mirror round-trip if apt refreshed recently
+
+# Under --check the task above only REPORTS what it would install, so on a
+# host that has never had node everything below would run against an npm that
+# is not there: `command` fails outright and community.general.npm dies inside
+# get_bin_path. That is not hypothetical — CLAUDE.md's verification protocol
+# runs `--check --diff --limit cracker` first, and cracker has no node today.
+# stat runs normally under --check (the same reason roles/facts uses it), so
+# this lets a dry run say so and skip instead of failing.
+- name: Check whether npm is present yet
+  ansible.builtin.stat:
+    path: /usr/bin/npm       # the path the distro npm deb ships; see defaults
+  register: _npm_bin
+
+- name: Note that a dry run cannot go further on a host without npm
+  ansible.builtin.debug:
+    msg: >-
+      --check on a host where npm is not installed yet: apt only reported the
+      install, so the prefix and global-package tasks are skipped. Apply once
+      for real and the next --check is complete.
+  when:
+    - ansible_check_mode
+    - not _npm_bin.stat.exists
+
+# ---- User-global prefix and CLIs ------------------------------------------
+# become: false for the whole block is load-bearing, not hygiene: as root npm
+# resolves its prefix to /usr/local and installs the CLIs into root's
+# namespace, where the user's PATH never looks and where the revert
+# instructions in defaults/main.yml would be wrong.
+- name: Configure npm for {{ npm_home }}
+  become: false
+  when: _npm_bin.stat.exists or not ansible_check_mode
+  block:
+    # Created explicitly so shell_common's `[ -d "$HOME/.local/bin" ]` guard is
+    # already true in the first shell started after this run, rather than the
+    # one after that. npm would create it eventually — but only when the first
+    # package carrying a bin is installed.
+    - name: Ensure the user's local bin directory exists
+      ansible.builtin.file:
+        path: "{{ npm_prefix }}/bin"
+        state: directory
+        mode: "0755"
+
+    # `npm config set` always rewrites ~/.npmrc, so gate it behind a read of
+    # the resolved value — the same read-then-write guard roles/fonts uses for
+    # kwriteconfig6 and roles/locale for update-locale. `npm config get prefix`
+    # reports the MERGED value (builtin /usr/share/nodejs/npm/npmrc, then any
+    # /etc npmrc, then ~/.npmrc), so this compares against what npm will
+    # actually do rather than against the contents of one file.
+    - name: Read npm's current global prefix
+      ansible.builtin.command: npm config get prefix
+      register: _npm_current_prefix
+      changed_when: false
+      check_mode: false      # read-only, safe to run under --check
+
+    - name: Point npm's global prefix at {{ npm_prefix }}
+      ansible.builtin.command:
+        argv: [npm, config, set, prefix, "{{ npm_prefix }}"]
+      changed_when: true     # only reached when the value actually differs
+      when: _npm_current_prefix.stdout | trim != npm_prefix
+
+    # ORDER IS LOAD-BEARING: the prefix must be set before this, or run 1
+    # installs into /usr/local (or fails on permissions) and run 2 reinstalls
+    # everything into ~/.local — an idempotence failure, which is this repo's
+    # acceptance test. Do not reorder these two tasks.
+    #
+    # community.general.npm rather than `command: npm install -g`: the module
+    # checks `npm list --global --json --long` first, so it reports
+    # changed=false on a re-run, and it runs that list call even under --check
+    # (its check_mode support is `full`), so `--check --diff` tells the truth.
+    # A command task could do neither — npm exits 0 whether it installed or
+    # no-opped, so there is no honest changed_when to write.
+    - name: Install the global CLI packages
+      community.general.npm:
+        name: "{{ item }}"
+        global: true
+        state: present       # not `latest` — leave-in-place, CLAUDE.md §5
+      loop: "{{ npm_global_packages }}"
+      loop_control:
+        label: "{{ item }}"
+
+    - name: Report where the global CLIs landed
+      ansible.builtin.debug:
+        msg: >-
+          npm prefix={{ npm_prefix }} — bins in {{ npm_prefix }}/bin, which
+          shell_common already prepends to PATH. Managed:
+          {{ npm_global_packages | join(', ') | default('(none)', true) }}

@@ -1,0 +1,10 @@
+---
+# ---- Role gate -------------------------------------------------------------
+# OPT-IN role: default false, switched on by group_vars/robotics.yml. A ROS 2
+# distro is hundreds of MB and pulls its own apt source, so no host gets it by
+# accident — unlike the baseline roles, which default true and are opted out of.
+ros2_lyrical_manage: false
+
+# Full revert: `ros2_lyrical_manage: false` stops managing it; per CLAUDE.md §5
+# the role never uninstalls. Removing an installed ROS 2 is a documented one-off,
+# run by hand.

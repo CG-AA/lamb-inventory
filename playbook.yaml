@@ -1,11 +1,15 @@
 ---
-- name: Development base
-  hosts: development
+- name: Lamb base
+  # Every host in the inventory. `development` is a PROFILE group now (see
+  # inventory.yaml), not the parent of everything — targeting it here would
+  # silently stop provisioning the first host that isn't a dev box.
+  hosts: all
   gather_facts: true      # needed for ansible_user_dir (home of the target user)
   # Contracts (full text in CLAUDE.md — read it before adding a role):
-  #   * every role carries `<role>_manage` (default true) and is gated on it
-  #     HERE, so any role can be switched off from group_vars/host_vars without
-  #     touching its tasks;
+  #   * every role carries `<role>_manage` and is gated on it HERE, so a class
+  #     or profile group can switch it without touching its tasks. Baseline
+  #     roles default true (a class opts out); profile-only roles default false
+  #     (a profile opts in);
   #   * host detection happens ONLY in roles/facts, which must stay first and
   #     tagged `always` so a sliced run (--tags kitty) still has its vars.
   # Every role also carries its own tag; the boot trio shares `boot`. Re-run a
@@ -46,9 +50,32 @@
       when: bootlogo_manage | bool
       tags: [bootlogo, boot]
     # zsh + plugins + starship prompt and the shared shell dotfiles; the 26 MB
-    # bad-apple frame set only lands where zsh_badapple is true (host_vars)
+    # bad-apple frame set only lands where zsh_badapple is true (cosmetics)
     - role: zsh
       when: zsh_manage | bool
       tags: [zsh]
+    # ---- development profile ------------------------------------------------
+    # Defaults false, switched on by group_vars/development.yml, so
+    # `--tags development` re-runs the dev-only roles. Node + npm plus the
+    # user-global CLIs that land in ~/.local/bin.
+    #
+    # After zsh because zsh owns the PATH those global bins land on. Ordering
+    # against nvim does NOT matter today — lazy.nvim runs a plugin's `build`
+    # when you start nvim, not when Ansible deploys init.lua. If a
+    # `nvim --headless "+Lazy! sync" +qa` task is ever added to roles/nvim,
+    # this role has to move ABOVE it: yarn must exist before that build runs.
+    - role: npm
+      when: npm_manage | bool
+      tags: [npm, development]
+    # ---- robotics profile ---------------------------------------------------
+    # Both default to false and are switched on by group_vars/robotics.yml, so
+    # `--tags robotics` re-runs the pair. Scaffolds for now: the tasks are empty
+    # and the roles no-op until they are written.
+    - role: ros2-lyrical
+      when: ros2_lyrical_manage | bool
+      tags: [ros2, robotics]
+    - role: gazebo
+      when: gazebo_manage | bool
+      tags: [gazebo, robotics]
     # add more roles here as you modularise the rest of your setup, e.g.:
     # - dialout   # the `usermod -aG dialout` note in tmp.txt

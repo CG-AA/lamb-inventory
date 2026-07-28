@@ -18,16 +18,35 @@ Nothing machine-specific belongs in `roles/*/defaults/main.yml`.
 | What | Where | Example |
 |---|---|---|
 | One machine's truth | `host_vars/<host>.yml` | `grub_gfxmode: "1920x1200"` (cracker's panel) |
-| A whole class's policy | `group_vars/<class>.yml` | `fonts_manage: false` (all headless hosts) |
-| Which class a host is in | `inventory.yaml` groups | `glowing-glass` under `headless` |
+| A whole group's policy | `group_vars/<group>.yml` | `fonts_manage: false` (all headless hosts) |
+| Which groups a host is in | `inventory.yaml` groups | `glowing-glass` under `headless` |
 
-Adding another headless machine should be **one line in `inventory.yaml`** and
-nothing else. If it needs more than that, the policy was in the wrong place.
+Adding another headless machine should be **one line in `inventory.yaml`** (plus
+its profiles) and nothing else. If it needs more than that, the policy was in
+the wrong place.
+
+**Two axes, one direction each.** A host has exactly one *class* and any number
+of *profiles*:
+
+| Axis | Groups | Answers | Sets `<role>_manage` |
+|---|---|---|---|
+| Class | `workstations`, `headless` | what the machine **is** | only → `false` |
+| Profile | `development`, `robotics`, `cosmetics` | what it's **for** | only → `true` |
+
+Keeping assignment one-way is load-bearing, not tidiness. Two groups at the same
+depth setting the same var resolve **alphabetically**, silently — if `cosmetics`
+and `headless` both reached for `fonts_manage`, `headless` would win purely
+because h > c, and nothing would say so. One-way means the collision cannot
+arise. `host_vars/` still beats every group.
+
+Read a host's groups back out of the inventory rather than grepping:
+`ansible-inventory --graph`, or `ansible-inventory --host cracker` for the fully
+merged vars.
 
 ### 2. Every role ships `<role>_manage`, gated in the playbook
 
-Each role's `defaults/main.yml` defines `<role>_manage: true`, and
-`playbook.yaml` gates the role on it:
+Each role's `defaults/main.yml` defines `<role>_manage`, and `playbook.yaml`
+gates the role on it:
 
 ```yaml
 - role: fonts
@@ -35,7 +54,23 @@ Each role's `defaults/main.yml` defines `<role>_manage: true`, and
   tags: [fonts]
 ```
 
-That is what lets a class turn a role off without editing its tasks. `fonts`
+Which way the default points follows from §1's two axes:
+
+* **baseline roles default `true`** — wanted on any machine, a *class* opts out
+  (`fonts_manage: false` for headless);
+* **profile-only roles default `false`** — too big or too specific to install by
+  accident, a *profile* opts in (`ros2_lyrical_manage`, `gazebo_manage` via
+  `group_vars/robotics.yml`; `bootlogo_manage`, `grub_background_enabled`,
+  `zsh_badapple` via `group_vars/cosmetics.yml`).
+
+A profile gates what a role **draws**, never whether a correctness-critical role
+**runs**. `cosmetics` turns on the GRUB background and the boot logo, but
+`grub_manage` and `plymouth_manage` stay baseline `true` everywhere — the
+composition guard in §4 is what keeps another tool's `resume=` alive, and a host
+nobody looks at needs that protection just as much.
+
+Either way, this is what lets a group turn a role off (or on) without editing
+its tasks. `fonts`
 originally had no such toggle, so a headless host had no way to decline a
 Nerd Font install (~38 MB on disk, from a ~250 MB-unpacked archive) it could
 never rasterise. Roles with an internal

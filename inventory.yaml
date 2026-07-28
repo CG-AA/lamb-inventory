@@ -1,7 +1,23 @@
-development:
+---
+# Two orthogonal axes (see CLAUDE.md §1). A host has exactly one CLASS and any
+# number of PROFILES; the group encodes the policy, group_vars/<group>.yml
+# carries it.
+#
+#   class    — what the machine IS (capability).  Only ever turns roles OFF.
+#   profile  — what the machine is FOR (purpose). Only ever turns roles ON.
+#
+# The one-way rule matters: two groups at the same depth setting the same var
+# resolve alphabetically and silently, so `cosmetics` and `headless` must never
+# both reach for e.g. fonts_manage. host_vars/ still beats every group.
+#
+# Read a host's profiles back out with `ansible-inventory --graph` or
+# `ansible-inventory --host cracker`.
+all:
   children:
-    # Host classes (see CLAUDE.md): the group encodes policy, group_vars/<class>.yml
-    # carries it. Adding a headless box = one line under `headless`, nothing else.
+    # ---- Classes: what the machine IS. Exactly one per host. ----------------
+    # Connection vars are declared HERE, once; the profile groups below just
+    # re-list the name (a host may appear in any number of groups).
+    # Adding another headless box = one line under `headless` plus its profiles.
     workstations:
       hosts:
         cracker:
@@ -9,3 +25,16 @@ development:
     headless:
       hosts:
         glowing-glass:
+
+    # ---- Profiles: what the machine is FOR. Any number per host. -----------
+    development:
+      hosts:
+        cracker:
+        glowing-glass:
+    robotics:
+      hosts:
+        cracker:
+        glowing-glass:
+    cosmetics:            # someone sits at this machine, so flourishes pay off
+      hosts:
+        cracker:

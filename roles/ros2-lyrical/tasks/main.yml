@@ -1,0 +1,9 @@
+---
+# SCAFFOLD — no tasks yet, so the role is a no-op on every host.
+#
+# It is wired end-to-end regardless (defaults gate → `when:` in playbook.yaml →
+# tags [ros2, robotics] → group_vars/robotics.yml switching it on), so adding
+# the real work means editing only this file.
+#
+# TODO: ROS 2 Lyrical install — apt key + source, ros-lyrical-desktop, the
+# /opt/ros/lyrical/setup.zsh source line in the shell dotfiles, rosdep init.
