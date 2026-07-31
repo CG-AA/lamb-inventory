@@ -1,0 +1,20 @@
+---
+argument_specs:
+  main:
+    short_description: Plymouth splash off via text theme (package kept for the LUKS prompt)
+    options:
+      plymouth_manage:
+        type: bool
+        default: true
+        description: false = leave Plymouth entirely alone.
+      plymouth_applicable:
+        type: raw
+        description: >-
+          Null contract — null autodetects (themes dir + update-initramfs
+          present); force true/false in inventory to skip the probe.
+      plymouth_theme:
+        type: str
+        default: text
+        description: >-
+          Theme for the default.plymouth alternative; "text" = no graphical
+          splash. Restore stock Kubuntu with kubuntu-logo.

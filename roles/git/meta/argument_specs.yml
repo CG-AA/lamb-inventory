@@ -1,0 +1,23 @@
+---
+argument_specs:
+  main:
+    short_description: User identity and init.defaultBranch in the global git config
+    options:
+      git_user_name:
+        type: raw
+        description: >-
+          Real value lives in group_vars/all.yml (user-scoped). Null makes the
+          role warn-and-skip the identity keys.
+      git_user_email:
+        type: raw
+        description: See git_user_name — the pair is skipped unless both are set.
+      git_default_branch:
+        type: str
+        default: main
+        description: Written to init.defaultBranch to quiet git init's nag.
+      git_config_file:
+        type: str
+        default: ""
+        description: >-
+          Empty = git's own --global resolution for the connecting user; a
+          path switches to file scope (git config -f) for that exact file.

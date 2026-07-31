@@ -1,0 +1,44 @@
+---
+argument_specs:
+  main:
+    short_description: zsh, plugins, starship, the -lamb shell dotfiles, Bad Apple
+    options:
+      zsh_set_default_shell:
+        type: bool
+        default: true
+        description: Point the target user's login shell at zsh (next login).
+      zsh_install_starship:
+        type: bool
+        default: true
+        description: >-
+          Install starship where apt has it; warn-and-skip where it doesn't
+          (older Debian stable).
+      zsh_badapple:
+        type: bool
+        default: false
+        description: >-
+          Unpack the Bad Apple frame set for the prompt segment. Per-machine
+          easter egg — forced true in host_vars, never here.
+      zsh_shell_path:
+        type: path
+        default: /usr/bin/zsh
+        description: Debian's canonical zsh path.
+      zsh_home:
+        type: path
+        description: Target home; derives from the common target-user contract.
+      zsh_login_user:
+        type: str
+        description: Target login user; derives from the common target-user contract.
+      zsh_badapple_dir:
+        type: path
+        description: Frame set + runtime counter location (~/.badapple).
+      zsh_legacy_dotfiles:
+        type: list
+        elements: str
+        description: Dotfiles from earlier role revisions, removed when present.
+      zsh_legacy_zshrc_checksums:
+        type: list
+        elements: str
+        description: >-
+          sha256 of ~/.zshrc contents this role used to ship; a match is reset
+          to a stub before the sourcing block goes in (see tasks/main.yml).

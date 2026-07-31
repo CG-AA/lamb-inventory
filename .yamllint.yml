@@ -36,3 +36,5 @@ ignore:
   - .ansible/
   - .cache/
   - .venv/
+  # Jinja-templated scaffolding for `make new-role`, not real YAML.
+  - .role-skeleton/

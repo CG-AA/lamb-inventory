@@ -29,3 +29,8 @@ tags:           ## run a slice, e.g. `make tags TAGS=kitty,fonts`
 
 ops-upgrade:    ## ad-hoc play: OS package upgrade (all hosts; use --limit via ARGS)
 	ansible-playbook playbooks/ops/upgrade.yml $(ARGS)
+
+new-role:       ## scaffold roles/<NAME> from .role-skeleton, e.g. `make new-role NAME=htop`
+	@test -n "$(NAME)" || { echo "usage: make new-role NAME=<role>"; exit 1; }
+	ansible-galaxy role init --role-skeleton .role-skeleton --init-path roles $(NAME)
+	@echo "Now work through the checklist in CONTRIBUTING.md."

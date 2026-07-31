@@ -1,0 +1,57 @@
+---
+argument_specs:
+  main:
+    short_description: Pinned JetBrainsMono Nerd Font release + fontconfig/Plasma wiring
+    options:
+      fonts_set_fontconfig_default:
+        type: bool
+        default: true
+        description: Point the generic "monospace" family at the Nerd Font system-wide.
+      fonts_set_kde_fixed:
+        type: bool
+        default: true
+        description: Also set Plasma's fixed-width font (kdeglobals stores a concrete family).
+      fonts_cleanup_old_versions:
+        type: bool
+        default: true
+        description: Sweep superseded jetbrains-mono-nerd-* install directories.
+      fonts_nerd_version:
+        type: str
+        description: Release tag of ryanoasis/nerd-fonts; bump together with the checksum.
+      fonts_nerd_archive:
+        type: str
+        description: Asset filename on the release page.
+      fonts_nerd_url:
+        type: str
+        description: Download URL, derived from version + archive.
+      fonts_nerd_checksum:
+        type: str
+        description: '"sha256:..." from the release''s SHA-256.txt — makes the pin meaningful.'
+      fonts_nerd_extract:
+        type: list
+        elements: str
+        description: GNU tar --wildcards member patterns; selects the base family + licence.
+      fonts_install_root:
+        type: path
+        default: /usr/local/share/fonts
+      fonts_install_dir:
+        type: path
+        description: Versioned install dir — an upgrade is a clean swap, not a merge.
+      fonts_download_dest:
+        type: path
+        description: Where the archive lands on the target during install.
+      fonts_family:
+        type: str
+        description: >-
+          Family name the patched fonts register as; follows the shared
+          font_mono_family (group_vars).
+      fonts_fontconfig_dropin:
+        type: path
+        description: conf.d drop-in path — the number prefix is load-bearing (glob order).
+      fonts_kde_size:
+        type: int
+        default: 10
+        description: Point size in the Plasma fixed-width font string.
+      fonts_kde_font_string:
+        type: str
+        description: Qt 6 QFont::toString() form, exactly what the Fonts KCM writes.

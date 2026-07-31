@@ -1,0 +1,29 @@
+---
+argument_specs:
+  main:
+    short_description: Lenovo LBLDESP firmware boot-logo scaffold (DMI-gated ESP staging)
+    options:
+      bootlogo_enabled:
+        type: raw
+        description: >-
+          Null contract — null autodetects by matching DMI identity below;
+          force true/false in inventory to override.
+      bootlogo_vendor_match:
+        type: str
+        default: LENOVO
+        description: ansible_facts system_vendor value that identifies the target machine.
+      bootlogo_board_match:
+        type: str
+        default: LNVNB161216
+        description: ansible_facts board_name for the ThinkBook 14 G6 IRL (21KG).
+      bootlogo_image_src:
+        type: str
+        default: lenovo-logo.bmp
+        description: >-
+          Image dropped into roles/bootlogo/files/ (probed; absence degrades).
+          Firmware accepts JPG/GIF/BMP only, max 1920x1200, ~768px wide
+          recommended.
+      bootlogo_esp_dir:
+        type: path
+        default: /boot/efi/EFI/Lenovo/Logo
+        description: Staging directory on the ESP; the firmware write itself stays manual.

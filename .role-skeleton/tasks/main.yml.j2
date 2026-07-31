@@ -1,0 +1,7 @@
+---
+# House style (docs/conventions.md): FQCN modules, become per task with a
+# reason, warn-and-skip over fail, read-then-write guards around
+# non-idempotent CLIs, templated values at the END of task names.
+- name: Report that {{ role_name }} is still a stub
+  ansible.builtin.debug:
+    msg: Replace me — see CONTRIBUTING.md for the new-role checklist.

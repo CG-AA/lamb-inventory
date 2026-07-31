@@ -13,3 +13,5 @@ exclude_paths:
   - .github/
   - .ansible/
   - .cache/
+  # Jinja-templated scaffolding for `make new-role`, not real role YAML.
+  - .role-skeleton/
