@@ -16,10 +16,10 @@ kitty_set_default: true          # register kitty as x-terminal-emulator and sel
 kitty_replace_konsole: true
 kitty_launch_shortcut: "Meta+Return"   # global hotkey to launch kitty
 
-# Where kitty reads its config. Defaults to the *connecting* user's home.
-# Override (e.g. when provisioning a box as root) with the real login user:
-#   kitty_config_dir: /home/lamb/.config/kitty
-kitty_config_dir: "{{ ansible_facts['user_dir'] }}/.config/kitty"
+# Where kitty reads its config. Derived from the common role's target-user
+# contract — override common_target_home once (host_vars) to retarget every
+# per-user role, or set this var alone for a kitty-only override.
+kitty_config_dir: "{{ common_target_home }}/.config/kitty"
 
 # kitty.conf is deployed verbatim from files/kitty.conf (ansible.builtin.copy).
 # It is the single source of truth; edit that file to change kitty settings.

@@ -16,8 +16,9 @@ git_default_branch: "main"
 # Empty means "let git decide": the role writes with `--global`, i.e. git's own
 # resolution — ~/.gitconfig, or ~/.config/git/config when that file exists.
 # Because the tasks run with become: false, that is the *connecting* user's
-# home. When provisioning a box as root, name the real user's file instead —
-# same override contract as kitty_config_dir / zsh_home:
+# home. When provisioning a box as root, name the real user's file instead
+# (the one per-user path the common target-user contract cannot reach, because
+# git resolves it internally):
 #   git_config_file: /home/lamb/.gitconfig
 # Setting it switches the module from the `global` scope to the `file` scope
 # (`git config -f <path>`), which bypasses git's resolution entirely.

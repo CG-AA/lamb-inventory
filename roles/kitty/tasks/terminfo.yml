@@ -5,5 +5,4 @@
   ansible.builtin.apt:
     name: kitty-terminfo
     state: present
-    update_cache: true
-    cache_valid_time: 3600   # skip the mirror round-trip if apt refreshed recently
+    # cache refreshed once per run by the common dependency

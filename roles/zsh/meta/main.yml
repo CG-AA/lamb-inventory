@@ -1,0 +1,19 @@
+---
+galaxy_info:
+  role_name: zsh
+  author: TheLamb
+  description: zsh, plugins, starship prompt, shared shell dotfiles, Bad Apple easter egg
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - all
+  galaxy_tags: []
+
+# tags: [always] is load-bearing: duplicate dependencies dedupe to the FIRST
+# compiled instance, which inherits only that parent's tags — without the
+# explicit always-tag, common would vanish from --tags <role> runs.
+dependencies:
+  - role: common
+    tags: [always]

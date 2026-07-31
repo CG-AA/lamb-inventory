@@ -54,10 +54,8 @@ fonts_fontconfig_dropin: /etc/fonts/conf.d/52-jetbrains-mono-nerd.conf
 fonts_kde_size: 10
 fonts_kde_font_string: "{{ fonts_family }},{{ fonts_kde_size }},-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
 
-# Where kdeglobals lives. Same override contract as kitty_config_dir — when
-# provisioning as root for another login user:
-#   fonts_kde_config_dir: /home/lamb/.config
-fonts_kde_config_dir: "{{ ansible_facts['user_dir'] }}/.config"
+# kdeglobals is resolved against common_kde_config_dir (common role) — the
+# target-user contract covers this role too; no per-role path var needed.
 
 # Full revert: delete {{ fonts_install_dir }} and {{ fonts_fontconfig_dropin }},
 # run `sudo fc-cache -f`, and

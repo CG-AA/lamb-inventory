@@ -9,8 +9,7 @@
       - fontconfig
       - xz-utils
     state: present
-    update_cache: true
-    cache_valid_time: 3600   # skip the mirror round-trip if apt refreshed recently
+    # cache refreshed once per run by the common dependency
 
 # ---- Install the pinned Nerd Font release ----------------------------------
 # The stamp is written LAST, after a successful extract, so it marks a complete
@@ -44,12 +43,16 @@
     # The archive is flat, so extract straight into the versioned directory.
     # extra_opts lands after tar's own options, where non-option arguments are
     # member patterns — that is what filters 96 ttfs down to the base family.
+    # Skipped under --check: neither the dest dir nor the download exist there
+    # (the tasks above only pretend), and unarchive hard-fails on a missing
+    # dest instead of reporting "would change".
     - name: Extract the selected font files
       ansible.builtin.unarchive:
         src: "{{ fonts_download_dest }}"
         remote_src: true
         dest: "{{ fonts_install_dir }}"
         extra_opts: "{{ ['--wildcards'] + fonts_nerd_extract }}"
+      when: not ansible_check_mode
       notify: Refresh font cache
 
     - name: Write the install stamp
@@ -106,23 +109,18 @@
 
 # ---- KDE Plasma fixed-width font -------------------------------------------
 # Plasma's Fonts KCM stores a concrete family, not the generic alias, so the
-# fontconfig drop-in alone does not move it. Detect Plasma by /usr/bin/plasmashell
-# (same probe as roles/kitty/tasks/desktop.yml); on GNOME/Xfce/headless hosts
-# this block skips and the fontconfig alias is all that applies.
-- name: Detect KDE Plasma
-  ansible.builtin.stat:
-    path: /usr/bin/plasmashell
-  register: _fonts_plasmashell
-
+# fontconfig drop-in alone does not move it. Plasma detection
+# (common_plasma_detected) comes from the common dependency; on GNOME/Xfce/
+# headless hosts this block skips and the fontconfig alias is all that applies.
 - name: Set the Plasma fixed-width font
   become: false          # this is *your* dotfile, never root's
   when:
     - fonts_set_kde_fixed | bool
-    - _fonts_plasmashell.stat.exists
+    - common_plasma_detected
   block:
     - name: Locate the user's kdeglobals
       ansible.builtin.set_fact:
-        _fonts_kdeglobals: "{{ fonts_kde_config_dir }}/kdeglobals"
+        _fonts_kdeglobals: "{{ common_kde_config_dir }}/kdeglobals"
 
     # Write with KDE's own CLI — the same edit System Settings -> Text & Fonts
     # makes. kwriteconfig6 always rewrites, so gate it behind a read of the

@@ -7,8 +7,7 @@
   ansible.builtin.apt:
     name: git
     state: present
-    update_cache: true
-    cache_valid_time: 3600   # skip the mirror round-trip if apt refreshed recently
+    # cache refreshed once per run by the common dependency
 
 # git_config invokes `git config` itself — the same mechanism as running the
 # three commands by hand, not a rewrite of the file. It reads with --get-all

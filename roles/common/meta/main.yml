@@ -1,0 +1,14 @@
+---
+galaxy_info:
+  role_name: common
+  author: TheLamb
+  description: Shared plumbing — target-user contract, apt cache refresh, Plasma probe
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - all
+  galaxy_tags: []
+
+dependencies: []

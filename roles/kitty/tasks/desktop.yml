@@ -5,8 +5,15 @@
   ansible.builtin.apt:
     name: kitty
     state: present
-    update_cache: true
-    cache_valid_time: 3600   # skip the mirror round-trip if apt refreshed recently
+    # cache refreshed once per run by the common dependency
+
+# alternatives interrogates the real binary, so under --check on a host where
+# kitty isn't installed yet (the install above only pretended) it hard-fails
+# instead of reporting "would change". Probe first; skip only that dry-run gap.
+- name: Check whether the kitty binary is present
+  ansible.builtin.stat:
+    path: /usr/bin/kitty
+  register: _kitty_bin
 
 - name: Make kitty the default terminal (x-terminal-emulator)
   become: true
@@ -15,32 +22,30 @@
     link: /usr/bin/x-terminal-emulator
     path: /usr/bin/kitty
     priority: 60          # > konsole (40); `path` also forces manual selection
-  when: kitty_set_default | bool
+  when:
+    - kitty_set_default | bool
+    - not ansible_check_mode or _kitty_bin.stat.exists
 
 # KDE Plasma ignores x-terminal-emulator: its KTerminalLauncherJob callers
 # ("Open Terminal Here" in Dolphin, etc.) and the Default Applications KCM read
 # a separate key, TerminalApplication in kdeglobals [General]. NOTE this does
 # NOT cover pinned taskbar launchers or app-specific hotkeys -- those invoke a
 # fixed .desktop (e.g. org.kde.konsole) and bypass this key entirely.
-# On Debian we detect Plasma by the presence of /usr/bin/plasmashell (apt-only
-# role, so the path is stable). Plasma 6 uses the bare executable name here;
-# Plasma 5's .desktop-based TerminalService is not handled (targets Plasma 6).
-- name: Detect KDE Plasma
-  ansible.builtin.stat:
-    path: /usr/bin/plasmashell
-  register: _kitty_plasmashell
-
+# Plasma detection (common_plasma_detected) comes from the common dependency.
+# Plasma 6 uses the bare executable name here; Plasma 5's .desktop-based
+# TerminalService is not handled (targets Plasma 6).
 - name: Configure kitty as the Plasma default terminal
   become: false          # per-user dotfile like kitty.conf, never root's
   when:
     - kitty_set_default | bool
-    - _kitty_plasmashell.stat.exists
+    - common_plasma_detected
   block:
-    # kdeglobals sits beside kitty_config_dir so a kitty_config_dir override
-    # (provision as root, target another login user) is honoured here too.
+    # kdeglobals lives in the shared per-user config dir, so the common role's
+    # target-user override (provision as root, target another login user) is
+    # honoured here too.
     - name: Locate the user's kdeglobals
       ansible.builtin.set_fact:
-        _kitty_kdeglobals: "{{ kitty_config_dir | dirname }}/kdeglobals"
+        _kitty_kdeglobals: "{{ common_kde_config_dir }}/kdeglobals"
 
     # Write with KDE's own CLI -- the exact same edit System Settings ->
     # Default Applications -> Terminal Emulator makes. kwriteconfig6 is not
@@ -74,9 +79,9 @@
   become: false
   when:
     - kitty_replace_konsole | bool
-    - _kitty_plasmashell.stat.exists
+    - common_plasma_detected
   vars:
-    _kitty_cfg: "{{ kitty_config_dir | dirname }}"
+    _kitty_cfg: "{{ common_kde_config_dir }}"
   block:
     # The containment/applet group ids in appletsrc are host-specific, so we
     # can't target a fixed ini key -- strip the launcher from the value list by

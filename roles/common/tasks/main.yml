@@ -1,0 +1,26 @@
+---
+# Runs ONCE per play, before any depending role: every other role lists
+# common in meta/main.yml with `tags: [always]`. The explicit always-tag
+# matters — duplicate dependencies are deduped to the FIRST compiled
+# instance, which inherits only that parent's tags, so an untagged
+# dependency would vanish from `--tags kitty` runs entirely.
+
+# Refresh the apt cache here so the per-role apt tasks don't each carry
+# (and each pay for) their own update_cache/cache_valid_time preamble.
+- name: Refresh the apt cache (shared by all roles)
+  become: true
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: "{{ common_apt_cache_valid }}"
+
+# On Debian/Ubuntu the plasmashell binary path is stable (apt-only roles), so
+# its presence is the Plasma signal. Consumers: kitty (default terminal,
+# Konsole displacement) and fonts (fixed-width font in kdeglobals).
+- name: Detect KDE Plasma
+  ansible.builtin.stat:
+    path: /usr/bin/plasmashell
+  register: _common_plasmashell
+
+- name: Publish the Plasma detection result
+  ansible.builtin.set_fact:
+    common_plasma_detected: "{{ _common_plasmashell.stat.exists }}"

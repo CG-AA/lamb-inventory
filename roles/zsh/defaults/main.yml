@@ -29,12 +29,11 @@ zsh_badapple: false
 # Debian's canonical zsh path (usr-merge also provides /bin/zsh).
 zsh_shell_path: /usr/bin/zsh
 
-# The *connecting* user's home and login name -- same override contract as
-# kitty_config_dir. When provisioning a box as root, name the real user:
-#   zsh_home: /home/lamb
-#   zsh_login_user: lamb
-zsh_home: "{{ ansible_facts['user_dir'] }}"
-zsh_login_user: "{{ ansible_facts['user_id'] }}"
+# Derived from the common role's target-user contract — override
+# common_target_home/common_target_user once (host_vars) to retarget every
+# per-user role, or set these two alone for a zsh-only override.
+zsh_home: "{{ common_target_home }}"
+zsh_login_user: "{{ common_target_user }}"
 
 # Frame set + counter live here. ~/.badapple/.n is RUNTIME STATE: the precmd
 # hook rewrites it on every prompt. The role creates it once (force: false) and

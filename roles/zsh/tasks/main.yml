@@ -7,8 +7,7 @@
       - zsh-autosuggestions        # /usr/share/zsh-autosuggestions/... sourced by .zshrc
       - zsh-syntax-highlighting    # /usr/share/zsh-syntax-highlighting/... sourced LAST
     state: present
-    update_cache: true
-    cache_valid_time: 3600   # skip the mirror round-trip if apt refreshed recently
+    # cache refreshed once per run by the common dependency
 
 # starship is missing from older Debian stable, so ask apt before installing
 # rather than failing the run on a host that simply cannot have it.
