@@ -27,8 +27,8 @@
     # Lenovo LBLDESP scaffold — DMI-gated, firmware write deferred
     - role: bootlogo
       tags: [bootlogo, boot]
-    # zsh + plugins + starship prompt and the shared shell dotfiles; the 26 MB
-    # bad-apple frame set only lands where zsh_badapple is true (host_vars)
+    # zsh + plugins + starship prompt and the shared shell dotfiles; the
+    # bad-apple frame tarball only unpacks where zsh_badapple is true (host_vars)
     - role: zsh
       tags: [zsh]
 # add more roles here as you modularise the rest of your setup, e.g.:

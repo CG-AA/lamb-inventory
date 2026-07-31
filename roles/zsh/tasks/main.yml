@@ -6,7 +6,6 @@
       - zsh
       - zsh-autosuggestions        # /usr/share/zsh-autosuggestions/... sourced by .zshrc
       - zsh-syntax-highlighting    # /usr/share/zsh-syntax-highlighting/... sourced LAST
-      - rsync                      # required on the target by the frame sync below
     state: present
     update_cache: true
     cache_valid_time: 3600   # skip the mirror round-trip if apt refreshed recently
@@ -20,6 +19,9 @@
   check_mode: false
   when: zsh_install_starship | bool
 
+# Two ways apt can say no: a known-but-uninstallable package prints
+# "Candidate: (none)", a completely unknown one prints NOTHING at all —
+# an empty stdout must not slip past the guard and crash the install.
 - name: Install the starship prompt
   become: true
   ansible.builtin.apt:
@@ -28,6 +30,7 @@
   when:
     - zsh_install_starship | bool
     - _zsh_starship_policy.stdout is defined
+    - "'Candidate:' in _zsh_starship_policy.stdout"
     - "'Candidate: (none)' not in _zsh_starship_policy.stdout"
 
 - name: Warn that starship is not packaged on this host
@@ -41,7 +44,9 @@
   when:
     - zsh_install_starship | bool
     - _zsh_starship_policy.stdout is defined
-    - "'Candidate: (none)' in _zsh_starship_policy.stdout"
+    - >-
+      'Candidate:' not in _zsh_starship_policy.stdout
+      or 'Candidate: (none)' in _zsh_starship_policy.stdout
 
 - name: Make zsh the login shell for {{ zsh_login_user }}
   become: true
@@ -92,15 +97,34 @@
         state: directory
         mode: "0755"
 
-    # rsync, not ansible.builtin.copy: 6524 files compare by size+mtime in one
-    # pass instead of a per-file checksum + transfer on every run. `delete` is
-    # safe because esc/ is wholly role-owned -- the mutable .n lives in the
-    # parent directory and is never inside the synced tree.
-    - name: Synchronise the frames into the user's home
-      ansible.posix.synchronize:
-        src: "{{ role_path }}/files/badapple/esc/"   # trailing slash: contents, not the dir
-        dest: "{{ zsh_badapple_dir }}/esc"
-        delete: true
+    # The 6524 frames travel as ONE tarball, not loose files: copy's checksum
+    # compare on a single archive is the whole idempotency story (re-runs cost
+    # one hash, no rsync dependency, no per-frame diff). The tarball stays on
+    # disk afterwards as the deployed-version marker.
+    - name: Copy the frame archive into the user's home
+      ansible.builtin.copy:
+        src: badapple-esc.tar.gz
+        dest: "{{ zsh_badapple_dir }}/badapple-esc.tar.gz"
+        mode: "0644"
+      register: _zsh_frames
+
+    # Clean swap on change: esc/ is wholly role-owned (the mutable .n lives in
+    # the parent directory), so dropping the old tree before unpacking gives
+    # the same stale-file guarantee `synchronize: delete=true` used to.
+    # noqa below: not handlers on purpose — the swap must happen HERE, between
+    # the archive landing and anything reading esc/, not at end of play.
+    - name: Remove the previous frame tree  # noqa: no-handler
+      ansible.builtin.file:
+        path: "{{ zsh_badapple_dir }}/esc"
+        state: absent
+      when: _zsh_frames is changed
+
+    - name: Unpack the frames  # noqa: no-handler
+      ansible.builtin.unarchive:
+        src: "{{ zsh_badapple_dir }}/badapple-esc.tar.gz"
+        dest: "{{ zsh_badapple_dir }}"
+        remote_src: true
+      when: _zsh_frames is changed
 
     # .n is runtime state, rewritten by the precmd hook on every prompt.
     # force: false = create if absent, then never touch it again.
