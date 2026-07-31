@@ -43,7 +43,8 @@
 # A BARE variable name (no "=") tells update-locale to remove that variable —
 # see update-locale(8). Passing "LC_ALL=" instead writes an empty assignment
 # and leaves the line in place, which would keep this task reporting changed.
-- name: Set LANG (and drop LC_ALL) via update-locale  # noqa: command-instead-of-module (no module drives update-locale; templating the file would fight it)
+# noqa below: no module drives update-locale; templating the file would fight it.
+- name: Set LANG (and drop LC_ALL) via update-locale  # noqa: command-instead-of-module
   become: true
   ansible.builtin.command:
     argv: >-

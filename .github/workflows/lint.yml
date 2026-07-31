@@ -1,0 +1,32 @@
+---
+name: lint
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install tooling
+        run: pip install ansible-core ansible-lint yamllint pre-commit
+
+      - name: Install collections
+        run: ansible-galaxy collection install -r requirements.yml
+
+      # Same gate as `pre-commit run` locally: hygiene hooks + yamllint +
+      # ansible-lint, configured by the dotfiles at the repo root.
+      - name: pre-commit (all files)
+        run: pre-commit run --all-files --show-diff-on-failure
+
+      # Entry playbook is parameterized in the Makefile, so a playbook
+      # relocation never needs a CI edit.
+      - name: Syntax check
+        run: make syntax

@@ -1,0 +1,17 @@
+# Ansible runtime litter
+.ansible/
+*.retry
+collections/ansible_collections/
+
+# Tooling caches / venvs
+.cache/
+.venv/
+__pycache__/
+*.pyc
+
+# Editor droppings
+*.swp
+*.swo
+*~
+.idea/
+.vscode/

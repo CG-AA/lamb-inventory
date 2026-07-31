@@ -31,5 +31,5 @@
     # bad-apple frame set only lands where zsh_badapple is true (host_vars)
     - role: zsh
       tags: [zsh]
-    # add more roles here as you modularise the rest of your setup, e.g.:
-    # - dialout   # the `usermod -aG dialout` note in tmp.txt
+# add more roles here as you modularise the rest of your setup, e.g.:
+# dialout — the `usermod -aG dialout` note in tmp.txt

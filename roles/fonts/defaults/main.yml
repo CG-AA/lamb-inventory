@@ -13,7 +13,8 @@ fonts_cleanup_old_versions: true     # remove superseded jetbrains-mono-nerd-* d
 # directory is then swept by the cleanup task.
 fonts_nerd_version: "v3.4.0"
 fonts_nerd_archive: "JetBrainsMono.tar.xz"
-fonts_nerd_url: "https://github.com/ryanoasis/nerd-fonts/releases/download/{{ fonts_nerd_version }}/{{ fonts_nerd_archive }}"
+fonts_nerd_url: >-
+  https://github.com/ryanoasis/nerd-fonts/releases/download/{{ fonts_nerd_version }}/{{ fonts_nerd_archive }}
 fonts_nerd_checksum: "sha256:ef552a3e638f25125c6ad4c51176a6adcdce295ab1d2ffacf0db060caf8c1582"
 
 # The archive is FLAT (no top-level directory) and ships 96 ttfs, ~250 MB

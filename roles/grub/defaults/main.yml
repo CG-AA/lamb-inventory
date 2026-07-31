@@ -29,8 +29,9 @@ grub_cmdline_default: "quiet"
 # ---- Menu visibility -------------------------------------------------------
 grub_show_menu: false            # false = hidden; reveal with Shift/Esc during boot
 grub_menu_timeout: 5             # seconds the menu stays up when grub_show_menu: true
-grub_hidden_timeout: 1           # hidden Esc/Shift check window; 0 = fastest boot but
-                                 # UEFI Esc-catching gets flaky — keep 1 for reliability
+# Hidden Esc/Shift check window; 0 = fastest boot but UEFI Esc-catching gets
+# flaky — keep 1 for reliability.
+grub_hidden_timeout: 1
 
 # ---- Graphics / background -------------------------------------------------
 # Background shows whenever the menu is displayed (revealed or visible).

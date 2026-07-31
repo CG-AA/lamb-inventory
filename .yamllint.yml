@@ -1,0 +1,38 @@
+---
+# Style guard for every YAML file in the repo. Kept close to yamllint's
+# defaults on purpose — the interesting conventions live in ansible-lint and
+# docs/conventions.md, not here.
+extends: default
+
+rules:
+  # The comment culture in this repo is load-bearing (rationale + revert notes
+  # in defaults). Long comment lines are a warning, never a build breaker —
+  # the gate (make lint / pre-commit) runs yamllint without --strict.
+  line-length:
+    max: 120
+    level: warning
+  # Inline flow mappings are used deliberately for compact loop items, e.g.
+  # {src: zshrc-lamb, dest: .zshrc-lamb} in roles/zsh/tasks/main.yml.
+  braces:
+    max-spaces-inside: 1
+  # Every YAML document starts with `---` (ansible-lint expects it too).
+  # Error-level: this one is structural, not stylistic.
+  document-start:
+    present: true
+    level: error
+  # Allow `on:` in GitHub workflow files without quoting gymnastics.
+  truthy:
+    allowed-values: ["true", "false", "on"]
+  # The four settings below are required verbatim by ansible-lint's yaml rule
+  # (it refuses custom configs that diverge — see the rules/yaml docs page).
+  comments:
+    min-spaces-from-content: 1
+  comments-indentation: false
+  octal-values:
+    forbid-implicit-octal: true
+    forbid-explicit-octal: true
+
+ignore:
+  - .ansible/
+  - .cache/
+  - .venv/
