@@ -21,5 +21,10 @@ kitty_launch_shortcut: "Meta+Return"   # global hotkey to launch kitty
 # per-user role, or set this var alone for a kitty-only override.
 kitty_config_dir: "{{ common_target_home }}/.config/kitty"
 
-# kitty.conf is deployed verbatim from files/kitty.conf (ansible.builtin.copy).
-# It is the single source of truth; edit that file to change kitty settings.
+# The terminal font. Follows the shared monospace family (group_vars/all.yml)
+# that the fonts role installs; the default() keeps the role runnable
+# standalone, outside this inventory.
+kitty_font_family: "{{ font_mono_family | default('JetBrainsMono Nerd Font') }}"
+
+# kitty.conf renders from templates/kitty.conf.j2 — the single source of
+# truth; edit the template (or the vars above) to change kitty settings.

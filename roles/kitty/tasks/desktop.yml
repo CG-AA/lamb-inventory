@@ -140,10 +140,13 @@
     state: directory
     mode: "0755"
 
+# A template is safe now that the config is minimal: the old full upstream
+# dump had triple-brace fold markers in comments that collided with Jinja,
+# which is why this used to be a verbatim copy.
 - name: Deploy kitty.conf from the role (source of truth)
   become: false
-  ansible.builtin.copy:
-    src: kitty.conf     # static file; kitty.conf's {{{ }}} fold markers are not Jinja
+  ansible.builtin.template:
+    src: kitty.conf.j2
     dest: "{{ kitty_config_dir }}/kitty.conf"
     mode: "0644"
     backup: true         # keeps the previous file on first run, so nothing is lost

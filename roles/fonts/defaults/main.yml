@@ -39,7 +39,9 @@ fonts_download_dest: "/tmp/{{ fonts_nerd_archive }}"
 # ---- Family wiring ---------------------------------------------------------
 # The family name the patched fonts actually register as — check with
 # `fc-list | grep -i jetbrains` after the first run if you ever change release.
-fonts_family: "JetBrainsMono Nerd Font"
+# Follows the shared monospace family (group_vars/all.yml) consumed by kitty
+# too; the default() keeps the role runnable standalone, outside this inventory.
+fonts_family: "{{ font_mono_family | default('JetBrainsMono Nerd Font') }}"
 
 # fontconfig drop-in. The number is load-bearing; conf.d is read in glob order
 # and the first <prefer> inserted lands first in the family list:

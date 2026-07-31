@@ -1,0 +1,17 @@
+# Managed by Ansible — roles/kitty (lamb-inventory). Do not edit here;
+# change roles/kitty/templates/kitty.conf.j2 (or the vars it renders) and
+# re-run the role.
+#
+# Deliberately minimal: only settings that DIFFER from kitty's defaults live
+# here, so a diff of this file is a diff of intent. The full annotated
+# reference is `kitty +runpy 'from kitty.config import *; print(commented_out_default_config())'`
+# or https://sw.kovidgoyal.net/kitty/conf/ — copy a line in, change it, done.
+
+# Same family the fonts role installs and wires into fontconfig/Plasma;
+# both render from font_mono_family in group_vars/all.yml.
+font_family      {{ kitty_font_family }}
+
+# The window manager's titlebar is redundant with kitty's own tabs.
+hide_window_decorations yes
+
+tab_bar_style powerline
