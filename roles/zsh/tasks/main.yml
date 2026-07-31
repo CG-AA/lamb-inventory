@@ -54,20 +54,75 @@
     shell: "{{ zsh_shell_path }}"
   when: zsh_set_default_shell | bool
 
-- name: Deploy the shell dotfiles from the role (source of truth)
+# ---- The -lamb contract ----------------------------------------------------
+# Every rc file this role owns ends in `-lamb` and is REPLACED wholesale on
+# each run. The user's real ~/.zshrc and ~/.bashrc are NOT owned here: each
+# only gets a marker-delimited block (below) sourcing its -lamb counterpart.
+# So whatever random installers append lands in the stock files — outside the
+# managed ones — where it is easy to spot and never fought over.
+- name: Deploy the managed shell dotfiles from the role (source of truth)
   become: false          # these are *your* dotfiles, never root's
   ansible.builtin.copy:
-    src: "{{ item.src }}"
-    dest: "{{ zsh_home }}/{{ item.dest }}"
+    src: "{{ item }}"
+    dest: "{{ zsh_home }}/.{{ item }}"
     mode: "0644"
-    backup: true         # keeps any pre-existing file on first run, so nothing is lost
   loop:
-    - {src: zshrc, dest: .zshrc}
-    - {src: shell_common, dest: .shell_common}    # shell-agnostic aliases/PATH, also for bash
-    - {src: bashrc_lamb, dest: .bashrc_lamb}      # pyenv/cargo PATH + personal aliases
-    - {src: zshbadapple, dest: .zshbadapple}      # self-guarding: no-ops without frames
+    - shellrc-lamb       # POSIX layer for both shells: PATH, aliases, functions
+    - zshrc-lamb         # zsh interactive config
+    - bashrc-lamb        # bash-only additions (pyenv flavour, completion)
+    - zshbadapple-lamb   # self-guarding: no-ops without frames
   loop_control:
-    label: "{{ item.dest }}"
+    label: ".{{ item }}"
+
+# One-time migration: before the -lamb model, this role deployed ~/.zshrc
+# itself. Sourcing .zshrc-lamb on top of that old copy would run everything
+# twice, so a ~/.zshrc that is EXACTLY the old shipped file (checksum match —
+# a hand-customized one is never touched) is reset to a comment stub first.
+- name: Check what ~/.zshrc currently is
+  become: false
+  ansible.builtin.stat:
+    path: "{{ zsh_home }}/.zshrc"
+    checksum_algorithm: sha256
+  register: _zsh_zshrc_now
+
+- name: Reset the old role-shipped ~/.zshrc to a stub
+  become: false
+  ansible.builtin.copy:
+    content: |
+      # ~/.zshrc — yours. The managed zsh config lives in ~/.zshrc-lamb,
+      # pulled in by the lamb-inventory block below (keep that block last).
+    dest: "{{ zsh_home }}/.zshrc"
+    mode: "0644"
+  when:
+    - _zsh_zshrc_now.stat.exists
+    - _zsh_zshrc_now.stat.checksum | default('') in zsh_legacy_zshrc_checksums
+
+# create: true covers a fresh host with no rc file at all. The block sits at
+# the file's END and must stay last (zsh-syntax-highlighting's requirement);
+# things appended after it belong above it — move them up when they appear.
+- name: Source the managed config from the user's own rc files
+  become: false
+  ansible.builtin.blockinfile:
+    path: "{{ zsh_home }}/{{ item.rc }}"
+    create: true
+    mode: "0644"
+    backup: true         # keeps the pre-block file on first run, so nothing is lost
+    marker: "# {mark} lamb-inventory (roles/zsh)"
+    block: '[ -f ~/{{ item.managed }} ] && . ~/{{ item.managed }}'
+  loop:
+    - {rc: .zshrc, managed: .zshrc-lamb}
+    - {rc: .bashrc, managed: .bashrc-lamb}
+  loop_control:
+    label: "{{ item.rc }}"
+
+# Files earlier revisions of this role deployed under other names. Mirrors the
+# grub_legacy_dropins pattern: absorbed, so retired.
+- name: Retire superseded dotfiles
+  become: false
+  ansible.builtin.file:
+    path: "{{ zsh_home }}/{{ item }}"
+    state: absent
+  loop: "{{ zsh_legacy_dotfiles }}"
 
 - name: Ensure the user config directory exists
   become: false

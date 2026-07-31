@@ -17,7 +17,7 @@ zsh_install_starship: true
 # Default OFF -- it is a per-machine easter egg, not base shell config; forced
 # true in host_vars/cracker.yml.
 #
-# The hook file (~/.zshbadapple) deploys everywhere regardless, because it
+# The hook file (~/.zshbadapple-lamb) deploys everywhere regardless, because it
 # self-guards: it no-ops outside kitty, over SSH, and when ~/.badapple/esc is
 # absent. This var gates only the frame payload.
 #
@@ -40,5 +40,21 @@ zsh_login_user: "{{ common_target_user }}"
 # never touches it again; only the tarball + esc/ are role-owned.
 zsh_badapple_dir: "{{ zsh_home }}/.badapple"
 
-# The five dotfiles are deployed verbatim from files/ (ansible.builtin.copy).
-# Those copies are the single source of truth; edit them to change the shell.
+# The managed rc files (all `-lamb`-suffixed) deploy verbatim from files/ and
+# are replaced wholesale each run — those copies are the single source of
+# truth; edit them to change the shell. The user's own ~/.zshrc / ~/.bashrc
+# only carry a marker block sourcing the -lamb counterpart.
+
+# Dotfiles earlier revisions of this role deployed under other names — now
+# absorbed into the -lamb files and removed from the target (same pattern as
+# grub_legacy_dropins).
+zsh_legacy_dotfiles:
+  - .bashrc_lamb
+  - .shell_common
+  - .zshbadapple
+
+# sha256 of ~/.zshrc contents this role USED to ship. A target ~/.zshrc
+# matching one of these is the old deployed copy (not user-customized) and is
+# reset to a stub before the sourcing block goes in — see tasks/main.yml.
+zsh_legacy_zshrc_checksums:
+  - "1bf610885c4864f19294f6e40b7557db1c8718872e204a55b843858496645367"

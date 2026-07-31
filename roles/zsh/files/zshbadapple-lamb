@@ -1,3 +1,4 @@
+# ~/.zshbadapple-lamb — managed by Ansible (roles/zsh, lamb-inventory).
 # ---- bad apple as identity segment ----
 # Rendered by the [custom.badapple] segment in ~/.config/starship.toml.
 # The frame set is deployed only where zsh_badapple is true, so the presence of

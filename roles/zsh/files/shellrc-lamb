@@ -1,0 +1,60 @@
+# ~/.shellrc-lamb — POSIX layer, sourced by BOTH ~/.zshrc-lamb and
+# ~/.bashrc-lamb. Managed by Ansible (roles/zsh, lamb-inventory): edit the
+# copy in roles/zsh/files/, not this one — the role overwrites it.
+# Keep ONLY shell-agnostic content here (aliases, exports, PATH, functions).
+# Shell-specific config (prompt, completion, keybindings) lives in the
+# per-shell -lamb file.
+
+# ---- PATH ----
+# This file is the SOLE owner of PATH additions. Prepends only when the dir
+# exists (cargo/pyenv are per-machine installs) AND isn't already on PATH —
+# the membership check keeps nested shells (terminal -> tmux -> subshell)
+# from stacking duplicates, since they inherit the parent's PATH.
+_prepend_path() {
+    [ -d "$1" ] || return 0
+    case ":$PATH:" in *":$1:"*) ;; *) PATH="$1:$PATH" ;; esac
+}
+_prepend_path "$HOME/.local/bin"
+_prepend_path "$HOME/bin"
+_prepend_path "$HOME/.cargo/bin"
+export PYENV_ROOT="$HOME/.pyenv"
+_prepend_path "$PYENV_ROOT/bin"
+unset -f _prepend_path
+export PATH
+# NOTE: `pyenv init` is shell-flavoured, so it runs in the per-shell files.
+
+# ---- ls / grep colors ----
+# `dircolors -b` emits sh-compatible syntax, so both shells eval it fine.
+# This is the ONLY place dircolors runs (it used to run twice per shell).
+if [ -x /usr/bin/dircolors ]; then
+    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+    alias ls='ls --color=auto'
+    alias grep='grep --color=auto'
+    alias fgrep='fgrep --color=auto'
+    alias egrep='egrep --color=auto'
+fi
+
+# ---- ls shortcuts ----
+alias ll='ls -alF'
+alias la='ls -A'
+alias l='ls -CF'
+
+# ---- navigation shortcuts (handy, portable) ----
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+
+# ---- sudo shorthand ----
+# Trailing space makes both shells alias-expand the following word too.
+# Completion wiring for `s` is per-shell: compdef (zsh) / complete (bash).
+alias s='sudo '
+
+# ---- tools ----
+alias gemini='npx @google/gemini-cli '
+
+# mount a btrfs subvolume: mount-subvol <subvol> <device> <mount point>
+mount-subvol() {
+    sudo mount -o subvol="$1" "$2" "$3"
+}
+
+# ---- add your own portable aliases / exports below ----

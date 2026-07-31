@@ -1,0 +1,31 @@
+# ~/.bashrc-lamb — the bash-only additions. Managed by Ansible (roles/zsh,
+# lamb-inventory): edit the copy in roles/zsh/files/, not this one — the role
+# overwrites it. Your OWN ~/.bashrc (Debian's stock file) stays yours; it only
+# carries the marker block that sources this file. No PATH lines here —
+# shellrc-lamb is the sole PATH owner.
+
+# ---- shared, portable layer ----
+[ -f ~/.shellrc-lamb ] && . ~/.shellrc-lamb
+
+# ---- pyenv (bash flavour; the env/PATH half lives in shellrc-lamb) ----
+command -v pyenv >/dev/null 2>&1 && eval "$(pyenv init - bash)"
+
+# ---- completion for the `s` (sudo) alias ----
+# Clone whatever completion rule bash actually uses for sudo onto `s`.
+_setup_s_alias_completion() {
+    # Force bash to load whatever rules it actually uses for sudo
+    _completion_loader sudo 2>/dev/null
+
+    # Fetch the exact rule bash assigned to sudo (e.g. "complete -F _command sudo")
+    local sudo_rule=$(complete -p sudo 2>/dev/null)
+
+    # If successfully grabbed, replace the word 'sudo' at the end with 's' and apply it
+    if [[ -n "$sudo_rule" ]]; then
+        eval "${sudo_rule/%sudo/s}"
+    fi
+
+    # Overwrite this function with a no-op so it only executes once
+    _setup_s_alias_completion() { :; }
+}
+# Append to PROMPT_COMMAND so it runs exactly once, right before the first prompt
+PROMPT_COMMAND="_setup_s_alias_completion${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
