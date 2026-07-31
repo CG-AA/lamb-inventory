@@ -31,5 +31,7 @@
     # bad-apple frame tarball only unpacks where zsh_badapple is true (host_vars)
     - role: zsh
       tags: [zsh]
-# add more roles here as you modularise the rest of your setup, e.g.:
-# dialout — the `usermod -aG dialout` note in tmp.txt
+    # serial-device access (USB-TTL, Arduino) for the target user
+    - role: dialout
+      tags: [dialout]
+# add more roles here as you modularise the rest of your setup
