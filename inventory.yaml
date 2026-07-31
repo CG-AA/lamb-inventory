@@ -1,5 +1,15 @@
 ---
-development:
+# Taxonomy: a group = a machine PURPOSE, and each purpose has its own play in
+# playbooks/ (imported by playbooks/site.yml). A host joins exactly one
+# purpose group; per-machine facts stay in host_vars/<host>.yml and values
+# true for every machine live in group_vars/all.yml.
+workstation:
   hosts:
     cracker:
       ansible_connection: local
+
+# Future purpose groups — for each: add the group here, write
+# playbooks/<purpose>.yml, add its import to playbooks/site.yml, and put
+# purpose-wide variable choices in group_vars/<purpose>.yml. Sketches:
+#   laptop:     workstation roles + power tuning
+#   server:     headless — terminfo-only kitty, no fonts/boot cosmetics

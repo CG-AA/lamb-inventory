@@ -1,8 +1,8 @@
 # Ergonomics wrapper — also pins the CWD contract: ansible.cfg is only read
 # from the directory you run in, so everything here assumes the repo root.
-PLAYBOOK ?= playbook.yaml
+PLAYBOOK ?= playbooks/site.yml
 
-.PHONY: help deps lint syntax check run tags
+.PHONY: help deps lint syntax check run tags ops-upgrade
 
 help:           ## list targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -26,3 +26,6 @@ run:            ## apply the entry playbook
 
 tags:           ## run a slice, e.g. `make tags TAGS=kitty,fonts`
 	ansible-playbook $(PLAYBOOK) --tags "$(TAGS)"
+
+ops-upgrade:    ## ad-hoc play: OS package upgrade (all hosts; use --limit via ARGS)
+	ansible-playbook playbooks/ops/upgrade.yml $(ARGS)

@@ -1,0 +1,25 @@
+---
+# Values true for EVERY machine, whatever its purpose group.
+#
+# Layering rules (low -> high precedence — see docs/inventory-and-plays.md):
+#   role defaults             host-agnostic fallbacks; a role must run sanely
+#                             with nothing but these
+#   group_vars/all.yml        user-scoped truths shared by every machine (here)
+#   group_vars/<purpose>.yml  choices for one machine purpose
+#   host_vars/<host>.yml      hardware/machine specifics
+#   -e / play vars            one-off overrides
+
+# ---- Identity ---------------------------------------------------------------
+# The same person owns every machine in this inventory, so git identity is an
+# every-machine truth. It deliberately does NOT live in the git role's
+# defaults: a role default would be placeholder PII that a fresh clone
+# silently writes into gitconfig. Unset (null) makes the git role warn-and-skip
+# identity instead.
+git_user_name: "TheLamb"
+git_user_email: "syankuan@gmail.com"
+
+# ---- Fonts ------------------------------------------------------------------
+# Single source for the monospace family: the fonts role installs it and wires
+# fontconfig/Plasma to it, and the kitty role renders with it. Change it here
+# and both stay in step.
+font_mono_family: "JetBrainsMono Nerd Font"

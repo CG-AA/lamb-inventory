@@ -7,7 +7,7 @@
 # best mode on hardware we know nothing about.
 grub_gfxmode: "1920x1200"
 
-# This laptop gets the Bad Apple!! kitty animation (26 MB of frames synced to
+# This laptop gets the Bad Apple!! kitty animation (frame tarball unpacked to
 # ~/.badapple). The role default is false, so a VM, container or server gets
 # plain zsh + starship and the hook/prompt segment quietly no-op.
 zsh_badapple: true

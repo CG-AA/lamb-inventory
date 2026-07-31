@@ -1,9 +1,9 @@
 ---
-- name: Development base
-  hosts: development
+- name: Workstation base
+  hosts: workstation
   gather_facts: true      # needed for ansible_user_dir (home of the target user)
   # Every role carries its own tag; the boot trio shares `boot`. Re-run a slice
-  # with e.g. `ansible-playbook playbook.yaml --tags boot` (or --tags kitty).
+  # with e.g. `ansible-playbook playbooks/site.yml --tags boot` (or --tags kitty).
   roles:
     # UTF-8 base: generated locales + LANG, drops the blanket LC_ALL
     - role: locale

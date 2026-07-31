@@ -1,11 +1,12 @@
 ---
 # ---- Identity --------------------------------------------------------------
-# Written into the user's global git config. These are user-scoped, not
-# machine-scoped, so they live here rather than in host_vars — the same person
-# provisioning a VM or container wants the same identity there.
-# Override per-host (or per-user) in inventory/host_vars if that ever changes.
-git_user_name: "TheLamb"
-git_user_email: "syankuan@gmail.com"
+# User-scoped, so the real values live in group_vars/all.yml (same person on
+# every machine), NOT here — a role default would be placeholder PII that a
+# fresh clone silently writes into gitconfig. Null = the role warns and skips
+# the identity keys (same null contract as grub_applicable), while
+# init.defaultBranch below still applies.
+git_user_name: ~
+git_user_email: ~
 
 # ---- Repository defaults ---------------------------------------------------
 # git's own built-in initial branch is still `master`, and `git init` nags on

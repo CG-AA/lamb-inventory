@@ -1,0 +1,20 @@
+---
+# Ad-hoc operational play: OS package upgrade across the fleet. Run directly —
+# ops plays are never imported by site.yml (provisioning describes state; ops
+# plays perform actions you choose to take now):
+#   ansible-playbook playbooks/ops/upgrade.yml
+#   ansible-playbook playbooks/ops/upgrade.yml --limit cracker
+- name: Upgrade OS packages
+  hosts: all
+  gather_facts: false     # nothing here reads facts; skip the overhead
+  tasks:
+    - name: Apply the full upgrade (dist rules, new deps allowed)
+      become: true
+      ansible.builtin.apt:
+        update_cache: true
+        upgrade: dist
+
+    - name: Drop packages nothing depends on any more
+      become: true
+      ansible.builtin.apt:
+        autoremove: true
