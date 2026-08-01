@@ -29,12 +29,14 @@
     mode: "0755"
   when: bootlogo_enabled | bool
 
+# The probe is the shared asset_probe from the common role; it answers in
+# common_asset_stat.
 - name: Check whether the role ships a logo image
-  delegate_to: localhost
-  become: false
-  ansible.builtin.stat:
-    path: "{{ role_path }}/files/{{ bootlogo_image_src }}"
-  register: _bootlogo_src
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: asset_probe
+  vars:
+    common_asset_probe_path: "{{ role_path }}/files/{{ bootlogo_image_src }}"
   when: bootlogo_enabled | bool
 
 - name: Stage the logo on the ESP (survives ESP rebuilds via re-run)
@@ -43,12 +45,12 @@
     src: "{{ bootlogo_image_src }}"
     dest: "{{ bootlogo_esp_dir }}/{{ bootlogo_image_src }}"
     mode: "0644"
-  when: bootlogo_enabled | bool and _bootlogo_src.stat.exists
+  when: bootlogo_enabled | bool and common_asset_stat.stat.exists
 
 - name: Document the deferred firmware activation step
   ansible.builtin.debug:
     msg: >-
-      Logo {{ 'staged at ' + bootlogo_esp_dir if _bootlogo_src.stat.exists
+      Logo {{ 'staged at ' + bootlogo_esp_dir if common_asset_stat.stat.exists
               else 'NOT staged — drop ' + bootlogo_image_src + ' into roles/bootlogo/files/' }}.
       Activation is manual by design: the LBLDESP enable byte is still 0x00.
       Flip it with the vetted lenovo-logo-changer tool (see defaults/main.yml);

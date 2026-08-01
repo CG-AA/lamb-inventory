@@ -1,0 +1,13 @@
+---
+# Membership in `dialout` grants access to serial devices (/dev/ttyUSB*,
+# /dev/ttyACM* — USB-TTL adapters, Arduinos, modems) without sudo.
+# Takes effect on the target user's NEXT login; running sessions keep their
+# old group set.
+dialout_user: "{{ common_target_user }}"
+
+# Supplementary groups to append. A list so a future serial-adjacent group
+# (e.g. plugdev) is a one-line change.
+dialout_groups:
+  - dialout
+
+# Full revert: `sudo gpasswd -d <user> dialout` (then log out and back in).

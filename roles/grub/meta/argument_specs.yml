@@ -1,0 +1,57 @@
+---
+argument_specs:
+  main:
+    short_description: GRUB boot appearance — cmdline, hidden menu, background drop-in
+    options:
+      grub_manage:
+        type: bool
+        default: true
+        description: false = leave the boot loader entirely alone.
+      grub_applicable:
+        type: raw
+        description: >-
+          Null contract — null autodetects (update-grub + /boot/grub present);
+          force true/false in inventory to skip the probe.
+      grub_dropin_path:
+        type: path
+        default: /etc/default/grub.d/95-boot-appearance.cfg
+        description: The ONLY file this role writes under /etc/default; 95- sorts after legacy 90-.
+      grub_cmdline_default:
+        type: str
+        default: quiet
+        description: No 'splash' on purpose — Plymouth stays text; kdump appends crashkernel= after us.
+      grub_show_menu:
+        type: bool
+        default: false
+        description: false = hidden menu (reveal with Shift/Esc during boot).
+      grub_menu_timeout:
+        type: int
+        default: 5
+        description: Seconds the menu stays up when grub_show_menu is true.
+      grub_hidden_timeout:
+        type: int
+        default: 1
+        description: Hidden Esc/Shift window; 0 is faster but UEFI Esc-catching gets flaky.
+      grub_gfxmode:
+        type: str
+        default: auto
+        description: Menu resolution; per-machine override lives in host_vars.
+      grub_background_enabled:
+        type: bool
+        default: true
+        description: Only takes effect when the role ships grub_background_src.
+      grub_background_src:
+        type: str
+        default: grub-background.png
+        description: Image dropped into roles/grub/files/ (probed; absence degrades).
+      grub_background_dest:
+        type: path
+        default: /boot/grub/lamb-background.png
+      grub_disable_os_prober:
+        type: bool
+        default: true
+        description: Absorbed from the manual 99-migration.cfg (see defaults for history).
+      grub_legacy_dropins:
+        type: list
+        elements: path
+        description: Manual drop-ins whose settings are absorbed; removed when present.

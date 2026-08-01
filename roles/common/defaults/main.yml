@@ -1,0 +1,20 @@
+---
+# ---- Target-user contract --------------------------------------------------
+# THE single override point for "whose machine is this being provisioned for".
+# Every role that touches per-user files (kitty, nvim, fonts, zsh, git,
+# dialout) derives its paths/user from these two vars, so provisioning a box
+# as root for another login user is ONE override in inventory/host_vars:
+#   common_target_user: lamb
+#   common_target_home: /home/lamb
+# Default is the *connecting* user — requires gather_facts (user_id/user_dir).
+common_target_user: "{{ ansible_facts['user_id'] }}"
+common_target_home: "{{ ansible_facts['user_dir'] }}"
+
+# Where per-user KDE/XDG config lives; kdeglobals, appletsrc and friends are
+# resolved against this by the kitty and fonts roles.
+common_kde_config_dir: "{{ common_target_home }}/.config"
+
+# ---- apt -------------------------------------------------------------------
+# One cache refresh per run, shared by every role's install tasks (they all
+# depend on this role). Skip the mirror round-trip if apt refreshed recently.
+common_apt_cache_valid: 3600

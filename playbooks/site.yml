@@ -1,0 +1,18 @@
+---
+# Everything, for every machine: one import per purpose group. Each purpose
+# play only targets its own group, so running site.yml on a mixed inventory
+# gives every host exactly its purpose's roles.
+#
+# Slices still work through tags, e.g.:
+#   ansible-playbook playbooks/site.yml --tags kitty
+#   ansible-playbook playbooks/site.yml --tags boot
+# Ad-hoc/operational plays live in playbooks/ops/ and are run directly, never
+# imported here.
+- name: Workstations
+  ansible.builtin.import_playbook: workstation.yml
+
+# Future purposes — uncomment as the inventory grows them:
+# - name: Laptops
+#   ansible.builtin.import_playbook: laptop.yml
+# - name: Servers
+#   ansible.builtin.import_playbook: server.yml

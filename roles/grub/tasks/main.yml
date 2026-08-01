@@ -50,20 +50,21 @@
 
     # The role ships without a real background image; probe whether the user has
     # dropped one into roles/grub/files/ and degrade gracefully when they haven't
-    # (the drop-in then simply omits GRUB_BACKGROUND).
+    # (the drop-in then simply omits GRUB_BACKGROUND). The probe itself is the
+    # shared asset_probe from the common role; it answers in common_asset_stat.
     - name: Check whether the role ships a background image
-      delegate_to: localhost
-      become: false
-      ansible.builtin.stat:
-        path: "{{ role_path }}/files/{{ grub_background_src }}"
-      register: _grub_bg_src
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: asset_probe
+      vars:
+        common_asset_probe_path: "{{ role_path }}/files/{{ grub_background_src }}"
       when: grub_background_enabled | bool
 
     - name: Decide whether the background can be configured
       ansible.builtin.set_fact:
         _grub_background_ready: >-
           {{ grub_background_enabled | bool
-             and (_grub_bg_src.stat.exists | default(false)) }}
+             and (common_asset_stat.stat.exists | default(false)) }}
 
     - name: Note the missing background image (drop one into roles/grub/files/)
       ansible.builtin.debug:

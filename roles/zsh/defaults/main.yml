@@ -12,11 +12,12 @@ zsh_set_default_shell: true
 # so a starship-less host still gets a clean zsh with the plain default prompt.
 zsh_install_starship: true
 
-# Bad Apple!! identity segment: 26 MB / 6524 kitty-graphics frames rendered
-# into the prompt by a precmd hook. Default OFF -- it is a per-machine easter
-# egg, not base shell config; forced true in host_vars/cracker.yml.
+# Bad Apple!! identity segment: 6524 kitty-graphics frames (shipped as one
+# ~3.7 MB tarball, ~26 MB unpacked) rendered into the prompt by a precmd hook.
+# Default OFF -- it is a per-machine easter egg, not base shell config; forced
+# true in host_vars/cracker.yml.
 #
-# The hook file (~/.zshbadapple) deploys everywhere regardless, because it
+# The hook file (~/.zshbadapple-lamb) deploys everywhere regardless, because it
 # self-guards: it no-ops outside kitty, over SSH, and when ~/.badapple/esc is
 # absent. This var gates only the frame payload.
 #
@@ -28,17 +29,32 @@ zsh_badapple: false
 # Debian's canonical zsh path (usr-merge also provides /bin/zsh).
 zsh_shell_path: /usr/bin/zsh
 
-# The *connecting* user's home and login name -- same override contract as
-# kitty_config_dir. When provisioning a box as root, name the real user:
-#   zsh_home: /home/lamb
-#   zsh_login_user: lamb
-zsh_home: "{{ ansible_facts['user_dir'] }}"
-zsh_login_user: "{{ ansible_facts['user_id'] }}"
+# Derived from the common role's target-user contract — override
+# common_target_home/common_target_user once (host_vars) to retarget every
+# per-user role, or set these two alone for a zsh-only override.
+zsh_home: "{{ common_target_home }}"
+zsh_login_user: "{{ common_target_user }}"
 
 # Frame set + counter live here. ~/.badapple/.n is RUNTIME STATE: the precmd
 # hook rewrites it on every prompt. The role creates it once (force: false) and
-# never touches it again; only esc/ is synchronised from the role.
+# never touches it again; only the tarball + esc/ are role-owned.
 zsh_badapple_dir: "{{ zsh_home }}/.badapple"
 
-# The five dotfiles are deployed verbatim from files/ (ansible.builtin.copy).
-# Those copies are the single source of truth; edit them to change the shell.
+# The managed rc files (all `-lamb`-suffixed) deploy verbatim from files/ and
+# are replaced wholesale each run — those copies are the single source of
+# truth; edit them to change the shell. The user's own ~/.zshrc / ~/.bashrc
+# only carry a marker block sourcing the -lamb counterpart.
+
+# Dotfiles earlier revisions of this role deployed under other names — now
+# absorbed into the -lamb files and removed from the target (same pattern as
+# grub_legacy_dropins).
+zsh_legacy_dotfiles:
+  - .bashrc_lamb
+  - .shell_common
+  - .zshbadapple
+
+# sha256 of ~/.zshrc contents this role USED to ship. A target ~/.zshrc
+# matching one of these is the old deployed copy (not user-customized) and is
+# reset to a stub before the sourcing block goes in — see tasks/main.yml.
+zsh_legacy_zshrc_checksums:
+  - "1bf610885c4864f19294f6e40b7557db1c8718872e204a55b843858496645367"

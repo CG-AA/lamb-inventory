@@ -13,7 +13,8 @@ fonts_cleanup_old_versions: true     # remove superseded jetbrains-mono-nerd-* d
 # directory is then swept by the cleanup task.
 fonts_nerd_version: "v3.4.0"
 fonts_nerd_archive: "JetBrainsMono.tar.xz"
-fonts_nerd_url: "https://github.com/ryanoasis/nerd-fonts/releases/download/{{ fonts_nerd_version }}/{{ fonts_nerd_archive }}"
+fonts_nerd_url: >-
+  https://github.com/ryanoasis/nerd-fonts/releases/download/{{ fonts_nerd_version }}/{{ fonts_nerd_archive }}
 fonts_nerd_checksum: "sha256:ef552a3e638f25125c6ad4c51176a6adcdce295ab1d2ffacf0db060caf8c1582"
 
 # The archive is FLAT (no top-level directory) and ships 96 ttfs, ~250 MB
@@ -38,7 +39,9 @@ fonts_download_dest: "/tmp/{{ fonts_nerd_archive }}"
 # ---- Family wiring ---------------------------------------------------------
 # The family name the patched fonts actually register as — check with
 # `fc-list | grep -i jetbrains` after the first run if you ever change release.
-fonts_family: "JetBrainsMono Nerd Font"
+# Follows the shared monospace family (group_vars/all.yml) consumed by kitty
+# too; the default() keeps the role runnable standalone, outside this inventory.
+fonts_family: "{{ font_mono_family | default('JetBrainsMono Nerd Font') }}"
 
 # fontconfig drop-in. The number is load-bearing; conf.d is read in glob order
 # and the first <prefer> inserted lands first in the family list:
@@ -53,10 +56,8 @@ fonts_fontconfig_dropin: /etc/fonts/conf.d/52-jetbrains-mono-nerd.conf
 fonts_kde_size: 10
 fonts_kde_font_string: "{{ fonts_family }},{{ fonts_kde_size }},-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
 
-# Where kdeglobals lives. Same override contract as kitty_config_dir — when
-# provisioning as root for another login user:
-#   fonts_kde_config_dir: /home/lamb/.config
-fonts_kde_config_dir: "{{ ansible_facts['user_dir'] }}/.config"
+# kdeglobals is resolved against common_kde_config_dir (common role) — the
+# target-user contract covers this role too; no per-role path var needed.
 
 # Full revert: delete {{ fonts_install_dir }} and {{ fonts_fontconfig_dropin }},
 # run `sudo fc-cache -f`, and

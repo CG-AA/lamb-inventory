@@ -1,0 +1,10 @@
+---
+# append: true is the whole point — replace the group list and you'd strip
+# sudo/adm/... from the user. This is `usermod -aG dialout <user>`, made
+# idempotent.
+- name: Grant the serial-access groups to {{ dialout_user }}
+  become: true
+  ansible.builtin.user:
+    name: "{{ dialout_user }}"
+    groups: "{{ dialout_groups }}"
+    append: true

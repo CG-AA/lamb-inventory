@@ -1,0 +1,30 @@
+---
+argument_specs:
+  main:
+    short_description: Shared plumbing — target-user contract, apt cache, Plasma probe
+    options:
+      common_target_user:
+        type: str
+        description: >-
+          Login user every per-user role targets. Default is the connecting
+          user (requires gather_facts). Override once in host_vars when
+          provisioning as root for another user.
+      common_target_home:
+        type: path
+        description: Home directory of the target user; pairs with common_target_user.
+      common_kde_config_dir:
+        type: path
+        description: Per-user KDE/XDG config dir (kdeglobals and friends).
+      common_apt_cache_valid:
+        type: int
+        default: 3600
+        description: Seconds an existing apt cache is considered fresh.
+  asset_probe:
+    short_description: Controller-side probe for an optional role-shipped asset
+    options:
+      common_asset_probe_path:
+        type: path
+        required: true
+        description: >-
+          Absolute path (on the controller) of the asset to check; result is
+          registered as common_asset_stat for the caller.

@@ -1,0 +1,40 @@
+---
+argument_specs:
+  main:
+    short_description: Neovim install, editor alternative, templated init.lua
+    options:
+      nvim_set_default:
+        type: bool
+        default: true
+        description: Register nvim for the alternatives in nvim_alternatives.
+      nvim_alternatives:
+        type: list
+        elements: str
+        default: [editor]
+        description: Alternatives pointed at nvim; add vi/vim to hijack those too.
+      nvim_config_dir:
+        type: path
+        description: Where init.lua lands; derives from the common target-user contract.
+      nvim_tabstop:
+        type: int
+        default: 4
+      nvim_shiftwidth:
+        type: int
+        default: 4
+      nvim_expandtab:
+        type: bool
+        default: true
+        description: Insert spaces instead of tab characters.
+      nvim_relative_number:
+        type: bool
+        default: true
+      nvim_termguicolors:
+        type: bool
+        default: true
+      nvim_scrolloff:
+        type: int
+        default: 8
+      nvim_clipboard:
+        type: str
+        default: unnamedplus
+        description: '"unnamedplus" bridges to the system clipboard; "" keeps nvim''s own.'

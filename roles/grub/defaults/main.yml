@@ -14,7 +14,7 @@ grub_applicable: ~
 # /etc/default/grub itself is never touched; grub-mkconfig sources it first,
 # then grub.d/*.cfg in glob order, so later files win per-key.
 # Sort order matters and is load-bearing:
-#   90-lamb-machine.cfg   (lamb-machine tool's file — never touch)
+#   90-lamb-machine.cfg   (see the legacy note below — never touch)
 #   95-boot-appearance.cfg (ours; menu keys beat 90's)
 #   kdump-tools.cfg       (package; APPENDS crashkernel= to our cmdline after us)
 # No grub package ships the grub.d directory itself; the role creates it (that
@@ -29,8 +29,9 @@ grub_cmdline_default: "quiet"
 # ---- Menu visibility -------------------------------------------------------
 grub_show_menu: false            # false = hidden; reveal with Shift/Esc during boot
 grub_menu_timeout: 5             # seconds the menu stays up when grub_show_menu: true
-grub_hidden_timeout: 1           # hidden Esc/Shift check window; 0 = fastest boot but
-                                 # UEFI Esc-catching gets flaky — keep 1 for reliability
+# Hidden Esc/Shift check window; 0 = fastest boot but UEFI Esc-catching gets
+# flaky — keep 1 for reliability.
+grub_hidden_timeout: 1
 
 # ---- Graphics / background -------------------------------------------------
 # Background shows whenever the menu is displayed (revealed or visible).
@@ -39,15 +40,24 @@ grub_background_enabled: true
 grub_background_src: "grub-background.png"        # drop image into roles/grub/files/
 grub_background_dest: /boot/grub/lamb-background.png
 
-# ---- Absorbed from the manual 99-migration.cfg ------------------------------
+# ---- Legacy context (pre-Ansible history of these hosts) --------------------
+# Before this repo, boot setup on the original laptop was done by hand:
+#   * "lamb-machine" — the hand-run setup tooling this repo supersedes. Its
+#     GRUB drop-in (90-lamb-machine.cfg) may still exist on hosts it touched.
+#     This role never writes or removes that file; our 95- file simply sorts
+#     later, so our menu keys win per-key.
+#   * 99-migration.cfg — a one-off manual drop-in from the GPT/ESP migration
+#     of the original disk. Its only setting (disable os-prober) is absorbed
+#     into grub_disable_os_prober below, so the role retires the file.
+# A host that never had either file just no-ops both paths.
 grub_disable_os_prober: true
 
-# ---- Legacy manual drop-ins this role retires (settings absorbed above) -----
+# Manual drop-ins whose settings are absorbed above; removed when present.
 grub_legacy_dropins:
   - /etc/default/grub.d/99-migration.cfg
 
 # Full revert: delete {{ grub_dropin_path }} and run `update-grub`.
 # Override examples (inventory/host_vars):
-#   grub_show_menu: true         # visible 5s menu again (lamb-machine parity)
+#   grub_show_menu: true         # visible 5s menu again (pre-repo behaviour)
 #   grub_background_enabled: false
 #   grub_gfxmode: "1920x1200"    # a specific panel resolution (see host_vars/cracker.yml)

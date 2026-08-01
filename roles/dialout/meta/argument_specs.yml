@@ -1,0 +1,13 @@
+---
+argument_specs:
+  main:
+    short_description: Serial-device access — appends the target user to dialout
+    options:
+      dialout_user:
+        type: str
+        description: User to grant access; defaults to the common target user.
+      dialout_groups:
+        type: list
+        elements: str
+        default: [dialout]
+        description: Supplementary groups to append (never replaces existing ones).

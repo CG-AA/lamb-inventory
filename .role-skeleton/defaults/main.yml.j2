@@ -1,0 +1,12 @@
+---
+# ---- Behaviour toggles ------------------------------------------------------
+# Every public variable: {{ role_name }}_ prefix, a comment saying what it
+# does and WHY this default. Defaults must be host-agnostic — the role runs
+# sanely with nothing but these on a bare VM (docs/conventions.md).
+{{ role_name }}_example: true
+
+# ---- Paths ------------------------------------------------------------------
+# Per-user paths derive from the common role's target-user contract, e.g.:
+#   {{ role_name }}_config_dir: "{% raw %}{{ common_target_home }}{% endraw %}/.config/{{ role_name }}"
+
+# Full revert: <the manual commands that undo this role>

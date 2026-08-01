@@ -7,8 +7,18 @@
   ansible.builtin.apt:
     name: git
     state: present
-    update_cache: true
-    cache_valid_time: 3600   # skip the mirror round-trip if apt refreshed recently
+    # cache refreshed once per run by the common dependency
+
+# Identity comes from group_vars/all.yml; null means "not configured" and the
+# role says so rather than writing empty values — warn-and-skip, same courtesy
+# as the grub/plymouth applicability gates.
+- name: Warn that the git identity is not configured
+  ansible.builtin.debug:
+    msg: >-
+      git_user_name / git_user_email are unset — identity keys skipped, only
+      init.defaultBranch applied. Set them in group_vars/all.yml (user-scoped,
+      shared by every machine).
+  when: not (git_user_name and git_user_email)
 
 # git_config invokes `git config` itself — the same mechanism as running the
 # three commands by hand, not a rewrite of the file. It reads with --get-all
@@ -27,9 +37,11 @@
     scope: "{{ 'file' if git_config_file else 'global' }}"
     file: "{{ git_config_file | default(omit, true) }}"
     state: present
-  loop:
-    - {name: user.name, value: "{{ git_user_name }}"}
-    - {name: user.email, value: "{{ git_user_email }}"}
-    - {name: init.defaultBranch, value: "{{ git_default_branch }}"}
+  # The identity pair only joins the loop when both halves are set.
+  loop: >-
+    {{ ([{'name': 'user.name', 'value': git_user_name},
+         {'name': 'user.email', 'value': git_user_email}]
+        if (git_user_name and git_user_email) else [])
+       + [{'name': 'init.defaultBranch', 'value': git_default_branch}] }}
   loop_control:
     label: "{{ item.name }}"

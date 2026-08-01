@@ -1,0 +1,19 @@
+---
+# Reusable controller-side probe: "does the calling role actually ship this
+# asset?" Roles that degrade gracefully without their optional artwork (grub
+# background, bootlogo image) call this instead of each rolling their own:
+#
+#   - name: Check whether the role ships a background image
+#     ansible.builtin.include_role:
+#       name: common
+#       tasks_from: asset_probe
+#     vars:
+#       common_asset_probe_path: "{{ role_path }}/files/{{ grub_background_src }}"
+#
+# Result lands in common_asset_stat (a normal stat result) for the caller.
+- name: Check whether the role ships {{ common_asset_probe_path | basename }}
+  delegate_to: localhost
+  become: false
+  ansible.builtin.stat:
+    path: "{{ common_asset_probe_path }}"
+  register: common_asset_stat

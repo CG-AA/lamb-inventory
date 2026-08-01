@@ -1,0 +1,29 @@
+---
+# Local gate mirrored by CI (.github/workflows/lint.yml). One-time setup:
+#   pre-commit install
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+      # 4500 KB admits the ~3.7 MB bad-apple tarball while blocking any
+      # future "commit thousands of loose frames" regression.
+      - id: check-added-large-files
+        args: [--maxkb=4500]
+
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.38.0
+    hooks:
+      - id: yamllint
+
+  - repo: https://github.com/ansible/ansible-lint
+    rev: v26.6.0
+    hooks:
+      - id: ansible-lint
+        # The upstream hook pins a bleeding-edge interpreter; any >=3.11 works.
+        language_version: python3.12
+        # The hook's isolated venv needs the same collections the repo uses.
+        additional_dependencies:
+          - ansible-core

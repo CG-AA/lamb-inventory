@@ -1,0 +1,34 @@
+---
+argument_specs:
+  main:
+    short_description: kitty terminal — desktop setup, or terminfo-only on headless hosts
+    options:
+      kitty_has_de:
+        type: raw
+        required: false
+        description: >-
+          Null contract — unset means autodetect a desktop environment
+          (systemd graphical.target / display manager); force true/false in
+          inventory to pick the desktop or terminfo-only path.
+      kitty_set_default:
+        type: bool
+        default: true
+        description: Register kitty as x-terminal-emulator and Plasma's terminal.
+      kitty_replace_konsole:
+        type: bool
+        default: true
+        description: >-
+          Plasma-only — drop the Konsole taskbar pin, disable its Ctrl+Alt+T,
+          bind kitty_launch_shortcut to kitty instead (applies next login).
+      kitty_launch_shortcut:
+        type: str
+        default: Meta+Return
+        description: Global hotkey bound to launching kitty (Plasma).
+      kitty_config_dir:
+        type: path
+        description: Where kitty.conf lands; derives from the common target-user contract.
+      kitty_font_family:
+        type: str
+        description: >-
+          Terminal font; follows the shared font_mono_family (group_vars)
+          that the fonts role installs.

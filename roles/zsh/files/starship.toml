@@ -1,6 +1,6 @@
 format = """${custom.badapple}${custom.host_remote}$directory$git_branch$git_status$character"""
 
-# Bad Apple!! frame, fed by the precmd hook in ~/.zshbadapple. The hook exports
+# Bad Apple!! frame, fed by the precmd hook in ~/.zshbadapple-lamb. The hook exports
 # BADAPPLE_SEG only inside kitty, off SSH, and where the frames were deployed —
 # everywhere else the `when` test fails and the segment disappears.
 [custom.badapple]

@@ -1,0 +1,17 @@
+---
+# ansible-lint gate. `production` is the strictest built-in profile; the goal
+# is an empty skip_list — rule exceptions belong inline as justified `# noqa`
+# comments next to the task they cover (see CONTRIBUTING.md), never here.
+profile: production
+
+# Don't call out to galaxy while linting; requirements are installed by
+# `make deps` (locally) and the lint workflow (CI).
+offline: true
+
+exclude_paths:
+  - .git/
+  - .github/
+  - .ansible/
+  - .cache/
+  # Jinja-templated scaffolding for `make new-role`, not real role YAML.
+  - .role-skeleton/
