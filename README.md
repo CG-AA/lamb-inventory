@@ -20,6 +20,11 @@ make help                    # everything else
 Run from the repo root — `ansible.cfg` is only picked up from the CWD (the
 Makefile targets guarantee this).
 
+`check`, `run` and `tags` ask for your sudo password once per run (the roles
+install packages and write under `/etc`). `make syntax` and `make lint` never
+prompt. Passwordless sudo? Press enter, or export
+`ANSIBLE_BECOME_ASK_PASS=False`.
+
 ## Layout
 
 ```

@@ -173,12 +173,19 @@
         state: absent
       when: _zsh_frames is changed
 
+    # Skipped under --check for the same reason as the font extract
+    # (roles/fonts/tasks/main.yml): neither the directory nor the tarball
+    # exist there — the tasks above only pretend — and unarchive hard-fails
+    # on a missing dest instead of reporting "would change". The copy above
+    # already accounts for the frame set in the dry run's change count.
     - name: Unpack the frames  # noqa: no-handler
       ansible.builtin.unarchive:
         src: "{{ zsh_badapple_dir }}/badapple-esc.tar.gz"
         dest: "{{ zsh_badapple_dir }}"
         remote_src: true
-      when: _zsh_frames is changed
+      when:
+        - _zsh_frames is changed
+        - not ansible_check_mode
 
     # .n is runtime state, rewritten by the precmd hook on every prompt.
     # force: false = create if absent, then never touch it again.
