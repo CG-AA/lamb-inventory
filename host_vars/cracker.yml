@@ -11,3 +11,19 @@ grub_gfxmode: "1920x1200"
 # ~/.badapple). The role default is false, so a VM, container or server gets
 # plain zsh + starship and the hook/prompt segment quietly no-op.
 zsh_badapple: true
+
+# This laptop has a fingerprint reader, and pam_fprintd sits in front of
+# pam_unix in its sudo PAM stack: sudo greets ansible with "Place your right
+# index finger on the fingerprint reader" and only falls through to the
+# password prompt once fprintd gives up (~10 s, pam_fprintd's own timeout).
+# The local connection plugin waits become_success_timeout seconds — 10 by
+# default — for either the password prompt or become success, so it gave up at
+# almost exactly the moment sudo would have asked, and the play died
+# UNREACHABLE on the first become task. Wait long enough to outlast fprintd.
+#
+# Touching the reader when the prompt appears authenticates immediately; doing
+# nothing costs the fprintd fallback per become task, then the password
+# ansible already holds goes in automatically. Either way the run completes.
+# Note the knob is a var, not an ansible.cfg key (ansible-core >= 2.19), and
+# names the connection plugin — it belongs to `local`, this host's connection.
+ansible_local_become_success_timeout: 60
