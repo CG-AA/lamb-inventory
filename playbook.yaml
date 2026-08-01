@@ -31,5 +31,9 @@
     # bad-apple frame set only lands where zsh_badapple is true (host_vars)
     - role: zsh
       tags: [zsh]
+    # magic-wormhole: code-word file transfer between machines (command
+    # `wormhole`); install-only, the tool has no config file
+    - role: wormhole
+      tags: [wormhole]
     # add more roles here as you modularise the rest of your setup, e.g.:
     # - dialout   # the `usermod -aG dialout` note in tmp.txt

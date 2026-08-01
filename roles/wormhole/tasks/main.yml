@@ -1,0 +1,13 @@
+---
+# Priority: optional, and on Ubuntu it sits in universe — so it is absent from
+# every stock image until asked for. Nothing here is host-specific: the package
+# is arch-all Python, needs no display, no systemd and no hardware, so this
+# role applies unchanged to a laptop, a VM or a container and carries none of
+# the applicability gates the boot/desktop roles need.
+- name: Install magic-wormhole
+  become: true
+  ansible.builtin.apt:
+    name: magic-wormhole
+    state: present
+    update_cache: true
+    cache_valid_time: 3600   # skip the mirror round-trip if apt refreshed recently
