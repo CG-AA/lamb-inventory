@@ -27,3 +27,20 @@ zsh_badapple: true
 # Note the knob is a var, not an ansible.cfg key (ansible-core >= 2.19), and
 # names the connection plugin — it belongs to `local`, this host's connection.
 ansible_local_become_success_timeout: 60
+
+# Escalate with the classic sudo, not the Rust rewrite this Ubuntu defaults to.
+# ansible detects the password prompt by matching the start of a line against
+# the prompt it passed to `sudo -p` ("[sudo via ansible, key=...] password:").
+# sudo-rs does not use that string verbatim, it nests it inside its own:
+#
+#   [sudo: [sudo via ansible, key=nndl...] password:] Password:
+#
+# which no longer STARTS with what ansible is matching (become/__init__.py,
+# check_password_prompt), so ansible never recognises its cue, never sends the
+# password it is holding, and the task dies UNREACHABLE on the become timeout
+# above. Known Ubuntu bug — LP #2122414. Both binaries honour the same
+# /etc/sudoers, so this changes nothing about what is permitted; it only picks
+# the implementation ansible talks to, and leaves `sudo` in an interactive
+# shell as sudo-rs. Drop this line once ansible and sudo-rs agree on prompts.
+# Confirm the path with `update-alternatives --display sudo`.
+ansible_become_exe: /usr/bin/sudo.ws
