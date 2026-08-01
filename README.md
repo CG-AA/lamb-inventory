@@ -17,6 +17,18 @@ make ops-upgrade             # ad-hoc play: OS package upgrade
 make help                    # everything else
 ```
 
+Two ways to get an overview instead of the full task-by-task output:
+
+```sh
+make list                # every task title, in order — nothing runs
+make check BRIEF=1       # dry run, listing only what would change
+```
+
+`BRIEF=1` works on `check`, `run` and `tags`. It hides ok/skipped hosts, which
+also holds back their task banners, so only tasks with something to report
+print at all; `check` drops `--diff` with it. The PLAY RECAP still counts
+everything.
+
 Run from the repo root — `ansible.cfg` is only picked up from the CWD (the
 Makefile targets guarantee this).
 
