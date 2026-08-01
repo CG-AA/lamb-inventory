@@ -11,3 +11,55 @@
     state: present
     update_cache: true
     cache_valid_time: 3600   # skip the mirror round-trip if apt refreshed recently
+
+# ---- zsh completion --------------------------------------------------------
+# The Debian package ships completion for bash only. wormhole is a click app,
+# and click can emit a native zsh completion itself — so generate it with the
+# tool's own generator rather than hand-writing (and then having to maintain) a
+# _wormhole. Nothing to bridge with bashcompinit, and no cost at shell startup.
+- name: Install the zsh completion
+  when: wormhole_zsh_completion | bool
+  block:
+    # zsh's own fpath, not the user's dotfiles: this is a packaging gap, so the
+    # fix belongs beside the package for every user on the box, not inside the
+    # .zshrc that roles/zsh owns. Skipping when the directory is absent is the
+    # applicable-gate contract — a host without zsh gets no litter.
+    - name: Check for zsh's vendor completion directory
+      ansible.builtin.stat:
+        path: "{{ wormhole_zsh_completion_dir }}"
+      register: _wormhole_zsh_dir
+
+    - name: Note that zsh is not installed here
+      ansible.builtin.debug:
+        msg: >-
+          wormhole zsh completion skipped: {{ wormhole_zsh_completion_dir }}
+          does not exist, so zsh is not installed on this host. bash keeps the
+          completion the package ships. Re-run this role after roles/zsh (a
+          full playbook run already orders them that way) to pick it up.
+      when: not _wormhole_zsh_dir.stat.exists
+
+    # The generator is the binary installed above, so this cannot run earlier.
+    # Read-only: it prints the script and exits, touching nothing.
+    - name: Generate the zsh completion script
+      ansible.builtin.command: wormhole
+      environment:
+        _WORMHOLE_COMPLETE: zsh_source
+      register: _wormhole_zsh_completion
+      changed_when: false
+      check_mode: false       # read-only, so run even under --check
+      when: _wormhole_zsh_dir.stat.exists
+
+    # Written from the captured stdout rather than piped in a shell redirect so
+    # the copy stays idempotent: it checksums, and reports changed only when
+    # click's output actually differs (i.e. after a magic-wormhole upgrade).
+    #
+    # The generated script opens with `#compdef wormhole` and branches on
+    # $zsh_eval_context, so it is valid both eval'd and autoloaded from fpath —
+    # dropping it in fpath is the supported use, not a trick.
+    - name: Install the completion into zsh's fpath
+      become: true
+      ansible.builtin.copy:
+        content: "{{ _wormhole_zsh_completion.stdout }}\n"
+        dest: "{{ wormhole_zsh_completion_dir }}/_wormhole"
+        mode: "0644"
+      when: _wormhole_zsh_dir.stat.exists

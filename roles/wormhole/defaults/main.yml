@@ -1,10 +1,43 @@
 ---
-# ---- Why this role has no variables ----------------------------------------
-# magic-wormhole is a single binary with no configuration file of its own: the
-# only knobs it exposes (--appid, --relay-url, --transit-helper) are per-
-# invocation flags on the command line, and the CLI writes no dotfile to
-# override. There is therefore nothing for a template or a *_config_dir var to
-# own — the role's whole job is "the package is present".
+# ---- zsh completion --------------------------------------------------------
+# The Debian package ships tab-completion for bash only
+# (/usr/share/bash-completion/completions/wormhole), so under the zsh from
+# roles/zsh — which runs a plain compinit, no bashcompinit — the command line
+# completed nothing at all. This closes that bash/zsh asymmetry.
+#
+# What it actually buys, measured against the click backend rather than
+# assumed: the subcommands with their descriptions (send, receive, ssh, help)
+# and file-path completion for `wormhole send <TAB>`. Modest, but it is the
+# same set bash users already had.
+#
+# NOT the code words — and do not "fix" that later, because it is not broken.
+# Code-word completion is not shell completion at all: wormhole prompts for the
+# code itself ("Enter receive wormhole code:") and drives that prompt through
+# Python's readline in wormhole/_rlcompleter.py, with its own phonetically
+# distinct wordlist. It therefore works identically in bash, zsh or any other
+# shell, with or without this file. Asking the click backend to complete the
+# code argument returns nothing, in bash exactly as in zsh.
+#
+# Mechanism: wormhole is a click application, and click emits a native zsh
+# completion on demand (_WORMHOLE_COMPLETE=zsh_source). The role captures that
+# and installs it as _wormhole in zsh's vendor completion directory, which is
+# already on the default fpath — so no .zshrc edit, no bashcompinit bridge, no
+# generator run at shell startup, and every user on the machine gets it.
+#
+# Set false to leave zsh completion alone (bash keeps working either way).
+wormhole_zsh_completion: true
+
+# Debian's canonical home for completions shipped by packages rather than by
+# zsh itself; on the default fpath, so compinit finds _wormhole with no further
+# wiring. Its absence is how the role detects "no zsh here" and skips.
+# Override only if a host puts zsh somewhere non-standard.
+wormhole_zsh_completion_dir: /usr/share/zsh/vendor-completions
+
+# ---- Why there is no configuration -----------------------------------------
+# Beyond the completion above, this role is install-only. magic-wormhole has no
+# configuration file: its only knobs (--appid, --relay-url, --transit-helper)
+# are per-invocation flags, and the CLI writes no dotfile to override them.
+# There is therefore nothing for a template or a *_config_dir var to own.
 #
 # If you ever need a non-default rendezvous or transit relay, that is an alias
 # in roles/zsh/files/shell_common (where the shell-agnostic aliases live), not
@@ -15,16 +48,7 @@
 # `magic-wormhole` — same split as the nvim role (command nvim, package
 # neovim). Anything referring to this role's tag or vars uses `wormhole`.
 
-# ---- Known gap: no zsh completion ------------------------------------------
-# The receiving side offers tab-completion on the code words, but the Debian
-# package ships that completion for bash only
-# (/usr/share/bash-completion/completions/wormhole). The .zshrc deployed by
-# roles/zsh runs plain `compinit`, so under zsh `wormhole receive <TAB>` does
-# nothing. Bridging it is a one-line shell change, deliberately NOT made here
-# because it belongs to the shell role, not this one:
-#   autoload -Uz bashcompinit && bashcompinit
-# Typing the code by hand works exactly the same; the words are chosen to be
-# phonetically distinct precisely so they can be dictated and typed.
-
-# Full revert: `sudo apt purge magic-wormhole`. The tool keeps no state between
+# Full revert: `sudo apt purge magic-wormhole` and
+# `sudo rm -f /usr/share/zsh/vendor-completions/_wormhole` (purging the package
+# does not remove a file this role generated). The tool keeps no state between
 # runs — codes are single-use and nothing is left in the user's home.
