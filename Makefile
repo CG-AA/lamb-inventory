@@ -2,7 +2,21 @@
 # from the directory you run in, so everything here assumes the repo root.
 PLAYBOOK ?= playbooks/site.yml
 
-.PHONY: help deps lint syntax check run tags ops-upgrade
+# BRIEF=1 turns any run into an overview. Hiding ok/skipped hosts also DEFERS
+# their task banners — ansible prints a task's title only when that task has
+# something to report — so a `make check BRIEF=1` recap is the list of things
+# that would actually change, and --diff comes off so the hunks go with it.
+# Totals for the quiet tasks are still in the PLAY RECAP. `make list` is the
+# other half of the overview: every task title, in order, without running.
+ifdef BRIEF
+  PLAY := ANSIBLE_DISPLAY_OK_HOSTS=false ANSIBLE_DISPLAY_SKIPPED_HOSTS=false ansible-playbook
+  CHECK_DIFF :=
+else
+  PLAY := ansible-playbook
+  CHECK_DIFF := --diff
+endif
+
+.PHONY: help deps lint syntax list check run tags ops-upgrade new-role
 
 help:           ## list targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -28,17 +42,20 @@ lint:           ## yamllint + ansible-lint (same gate as CI)
 syntax:         ## ansible syntax check of the entry playbook
 	ansible-playbook $(PLAYBOOK) --syntax-check
 
-check:          ## dry run with diff (no changes applied)
-	ansible-playbook $(PLAYBOOK) --check --diff
+list:           ## every task title the entry playbook would run (nothing runs)
+	ansible-playbook $(PLAYBOOK) --list-tasks
 
-run:            ## apply the entry playbook
-	ansible-playbook $(PLAYBOOK)
+check:          ## dry run with diff (no changes applied); BRIEF=1 for an overview
+	$(PLAY) $(PLAYBOOK) --check $(CHECK_DIFF)
+
+run:            ## apply the entry playbook; BRIEF=1 for an overview
+	$(PLAY) $(PLAYBOOK)
 
 tags:           ## run a slice, e.g. `make tags TAGS=kitty,fonts`
-	ansible-playbook $(PLAYBOOK) --tags "$(TAGS)"
+	$(PLAY) $(PLAYBOOK) --tags "$(TAGS)"
 
 ops-upgrade:    ## ad-hoc play: OS package upgrade (all hosts; use --limit via ARGS)
-	ansible-playbook playbooks/ops/upgrade.yml $(ARGS)
+	$(PLAY) playbooks/ops/upgrade.yml $(ARGS)
 
 new-role:       ## scaffold roles/<NAME> from .role-skeleton, e.g. `make new-role NAME=htop`
 	@test -n "$(NAME)" || { echo "usage: make new-role NAME=<role>"; exit 1; }
